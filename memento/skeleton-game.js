@@ -11,8 +11,7 @@
 
   const FG = '#1a1a1a';
   const BG_COLOR = '#F5F0E8';
-  const isMobile = window.innerWidth <= 768;
-  const S = isMobile ? 1 : 2; // 2x on desktop, 1x on mobile
+  const S = 2; // consistent sprite scale on both desktop and mobile
 
   // Ground
   const GROUND_Y = 130;
