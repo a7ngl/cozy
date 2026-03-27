@@ -5,7 +5,7 @@
 
   const FG = '#1a1a1a';
   const BG = '#F5F0E8';
-  const SCALE = 2;
+  let SCALE = 2;
 
   let W, H;
   let gameRunning = false;
@@ -31,8 +31,8 @@
     frameTimer: 0
   };
 
-  const GRAVITY = 0.6;
-  const JUMP_FORCE = -10;
+  let GRAVITY = 0.6;
+  let JUMP_FORCE = -10;
 
   // Obstacles
   let obstacles = [];
@@ -50,8 +50,12 @@
     H = Math.floor(rect.height);
     canvas.width = W;
     canvas.height = H;
-    groundY = H - GROUND_Y_OFFSET;
-    skeleton.y = groundY - skeleton.h;
+    // Scale game elements based on canvas height
+    SCALE = Math.max(2, Math.floor(H / 60));
+    GRAVITY = 0.3 * SCALE;
+    JUMP_FORCE = -5 * SCALE;
+    groundY = H - SCALE * 10;
+    skeleton.y = groundY - skeleton.h * SCALE;
     ctx.imageSmoothingEnabled = false;
   }
 
