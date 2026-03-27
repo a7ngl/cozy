@@ -50,11 +50,18 @@
     H = Math.floor(rect.height);
     canvas.width = W;
     canvas.height = H;
-    // Scale game elements based on canvas height
-    SCALE = Math.max(2, Math.floor(H / 60));
-    GRAVITY = 0.3 * SCALE;
-    JUMP_FORCE = -5 * SCALE;
-    groundY = H - SCALE * 10;
+    // Scale: dynamic on mobile, fixed on desktop
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      SCALE = Math.max(2, Math.floor(H / 60));
+      GRAVITY = 0.3 * SCALE;
+      JUMP_FORCE = -5 * SCALE;
+    } else {
+      SCALE = 2;
+      GRAVITY = 0.6;
+      JUMP_FORCE = -10;
+    }
+    groundY = H - (isMobile ? SCALE * 10 : 30);
     skeleton.y = groundY - skeleton.h * SCALE;
     ctx.imageSmoothingEnabled = false;
   }

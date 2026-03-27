@@ -73,6 +73,12 @@ body {
   }
 }
 
+@media (min-width: 769px) {
+  #gameCanvas {
+    aspect-ratio: 4 / 1;
+  }
+}
+
 /* No click hint - auto transition */
 
 /* Page 2 - Input */
