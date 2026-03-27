@@ -362,9 +362,7 @@
       ctx.fillStyle = FG;
       ctx.font = '12px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('GAME OVER', W / 2, H / 2 - 10);
-      ctx.font = '10px monospace';
-      ctx.fillText('press space to restart', W / 2, H / 2 + 8);
+      ctx.fillText('GAME OVER', W / 2, H / 2);
     }
 
     // Start prompt
@@ -372,7 +370,7 @@
       ctx.fillStyle = FG;
       ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('press space to start', W / 2, H / 2);
+      ctx.fillText('start', W / 2, H / 2);
     }
   }
 
