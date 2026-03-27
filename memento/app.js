@@ -53,14 +53,14 @@ enterBtn.addEventListener('click', () => {
 
   document.getElementById('bornDisplay').textContent = val;
 
-  page2.classList.add('fade-out');
+  page2.classList.add('slide-up-out');
+  const dash = document.getElementById('dashboard');
+  dash.classList.remove('hidden');
+  dash.classList.add('slide-up-in');
+  initDashboard();
   setTimeout(() => {
     page2.classList.add('hidden');
-    const dash = document.getElementById('dashboard');
-    dash.classList.remove('hidden');
-    dash.classList.add('dashboard-enter');
-    initDashboard();
-  }, 600);
+  }, 1000);
 });
 
 function initDashboard() {
