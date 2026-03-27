@@ -198,7 +198,8 @@
     GROUND_BUMPS.push({
       x: i * 5 + Math.random() * 3,
       h: Math.random() > 0.7 ? 2 : 1,
-      w: Math.random() > 0.5 ? 2 : 1
+      w: Math.random() > 0.5 ? 2 : 1,
+      yOff: Math.floor(Math.random() * 8)
     });
   }
 
@@ -215,28 +216,28 @@
   }
 
   function drawScore() {
+    const DS = 2; // digit scale
     const s = String(Math.floor(score)).padStart(5, '0');
-    const digitW = 4;
-    const gap = 1;
-    let startX = GAME_W - 10 - s.length * (digitW + gap);
+    const digitW = (3 + 1) * DS; // 3px digit + 1px gap, scaled
+    let startX = GAME_W - 15 - s.length * digitW;
 
     // High score
     if (highScore > 0) {
       const hs = String(Math.floor(highScore)).padStart(5, '0');
-      const hiX = startX - 8 - hs.length * (digitW + gap) - 12;
+      const hiX = startX - 8 - hs.length * digitW - 16;
       // "HI"
       ctx.fillStyle = '#9b9590';
-      ctx.fillRect(hiX, 8, 1, 5);
-      ctx.fillRect(hiX+2, 8, 1, 5);
-      ctx.fillRect(hiX, 10, 3, 1);
-      ctx.fillRect(hiX+4, 8, 1, 5);
+      ctx.fillRect(hiX, 8, DS, 5 * DS);
+      ctx.fillRect(hiX + 2 * DS, 8, DS, 5 * DS);
+      ctx.fillRect(hiX, 8 + 2 * DS, 3 * DS, DS);
+      ctx.fillRect(hiX + 4 * DS, 8, DS, 5 * DS);
       for (let i = 0; i < hs.length; i++) {
-        drawPixels(DIGITS[hs[i]], hiX + 7 + i * (digitW + gap), 8, '#9b9590', 1);
+        drawPixels(DIGITS[hs[i]], hiX + 7 * DS + i * digitW, 8, '#9b9590', DS);
       }
     }
 
     for (let i = 0; i < s.length; i++) {
-      drawPixels(DIGITS[s[i]], startX + i * (digitW + gap), 8, FG, 1);
+      drawPixels(DIGITS[s[i]], startX + i * digitW, 8, FG, DS);
     }
   }
 
@@ -370,12 +371,12 @@
     ctx.fillStyle = FG;
     ctx.fillRect(0, GROUND_Y, GAME_W, 1);
 
-    // Ground bumps (scrolling)
+    // Ground bumps (scrolling) - uses pre-computed y offsets to avoid flicker
     for (let b of GROUND_BUMPS) {
       const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
       const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
       if (drawX >= 0 && drawX < GAME_W) {
-        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + Math.floor(Math.random() * 8), b.w, b.h);
+        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
       }
     }
 
@@ -399,7 +400,7 @@
     // Game over
     if (gameOver) {
       ctx.fillStyle = FG;
-      ctx.font = '10px monospace';
+      ctx.font = 'bold 18px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 5);
     }
@@ -407,7 +408,7 @@
     // Start prompt
     if (!gameRunning && !gameOver) {
       ctx.fillStyle = FG;
-      ctx.font = '8px monospace';
+      ctx.font = '14px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('start', GAME_W / 2, GAME_H / 2);
     }
