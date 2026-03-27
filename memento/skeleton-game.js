@@ -327,6 +327,14 @@
   }
 
   function updateStartingAnimation() {
+    skeleton.vy += GRAVITY;
+    skeleton.y += skeleton.vy;
+    var floorY = getFloorY(SKEL_RUN1.length);
+    if (skeleton.y >= floorY) {
+      skeleton.y = floorY;
+      skeleton.vy = 0;
+      skeleton.jumping = false;
+    }
     skeleton.frameTimer++;
     if (skeleton.frameTimer > 6) {
       skeleton.frame = 1 - skeleton.frame;
@@ -460,7 +468,10 @@
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else if (gameStarting) {
-          if (drawX <= groundExtend) {
+          var sc2 = skeleton.x + 6 * S;
+          var lw2 = 14 * S + 40;
+          var ls2 = sc2 - lw2 / 2;
+          if (drawX >= ls2 && drawX <= groundExtend) {
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else {
@@ -518,6 +529,8 @@
     if (gameStarting || gameRunning) return;
     gameStarting = true;
     skeleton.y = getFloorY(SKEL_RUN1.length);
+    skeleton.vy = JUMP_FORCE;
+    skeleton.jumping = true;
     var skelCenter = skeleton.x + 6 * S;
     var lineW = 14 * S + 40;
     groundExtend = skelCenter + lineW / 2;
