@@ -19,6 +19,7 @@
   var gameRunning = false;
   var gameOver = false;
   var gameStarting = false;
+  var ducking = false;
   var score = 0;
   var highScore = 0;
   var speed = 6;
@@ -65,10 +66,10 @@
     [0,0,0,0,1,0,0,1,0,0,0,0],
     [0,0,0,0,1,1,1,1,0,0,0,0],
     [0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,0,1,0,0,0,1,0,0,0],
-    [0,0,0,1,0,0,0,0,0,1,0,0],
-    [0,0,1,1,0,0,0,0,0,0,1,0],
-    [0,1,1,0,0,0,0,0,0,0,1,1]
+    [0,0,0,1,1,0,0,0,1,0,0,0],
+    [0,0,1,1,0,0,0,0,0,1,0,0],
+    [0,1,1,0,0,0,0,0,0,1,1,0],
+    [1,1,0,0,0,0,0,0,0,0,1,1]
   ];
 
   var SKEL_RUN2 = [
@@ -84,10 +85,10 @@
     [0,0,0,0,1,0,0,1,0,0,0,0],
     [0,0,0,0,1,1,1,1,0,0,0,0],
     [0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,1,0,0,0,1,0,0,0,0],
-    [0,0,1,0,0,0,0,0,1,0,0,0],
-    [0,1,0,0,0,0,0,0,0,1,1,0],
-    [1,1,0,0,0,0,0,0,0,0,1,1]
+    [0,0,0,0,1,0,0,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,1,1,0,0,0,0],
+    [0,0,1,1,0,0,1,0,0,0,0,0]
   ];
 
   var SKEL_JUMP = [
@@ -105,6 +106,67 @@
     [0,0,0,1,1,1,1,1,1,0,0,0],
     [0,0,0,0,1,0,0,1,0,0,0,0],
     [0,0,0,1,1,0,0,1,1,0,0,0]
+  ];
+
+  var SKEL_DUCK = [
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,1,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0],
+    [0,1,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    [1,0,0,0,1,1,1,1,1,0,0,1,0,1,0,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0]
+  ];
+
+  var WINGED_SKULL1 = [
+    [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,1,0,1,1,0,1,0,0,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+    [1,1,0,0,1,1,1,1,1,1,1,1,0,0,1,1],
+    [1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1],
+    [0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0],
+    [0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0]
+  ];
+
+  var WINGED_SKULL2 = [
+    [1,1,0,0,0,0,1,1,1,1,0,0,0,0,1,1],
+    [1,1,1,0,0,1,1,1,1,1,1,0,0,1,1,1],
+    [0,1,1,1,0,1,0,1,1,0,1,0,1,1,1,0],
+    [0,0,1,1,0,1,1,1,1,1,1,0,1,1,0,0],
+    [0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+    [0,0,0,0,1,1,0,1,1,0,1,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+  ];
+
+  var BAT1 = [
+    [1,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,0,0,0,0,0,0,0,0,0,1,1],
+    [1,1,1,0,0,0,0,0,0,0,1,1,1],
+    [1,1,1,1,0,1,1,1,0,1,1,1,1],
+    [0,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,1,1,1,1,1,0,0,0,0],
+    [0,0,0,0,0,1,0,1,0,0,0,0,0]
+  ];
+
+  var BAT2 = [
+    [0,0,0,0,0,1,1,1,0,0,0,0,0],
+    [0,0,0,0,1,1,1,1,1,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,0,0,1,1,1,1,1,0,0,1,1],
+    [1,0,0,0,0,1,1,1,0,0,0,0,1],
+    [0,0,0,0,0,1,0,1,0,0,0,0,0]
   ];
 
   var TOMBSTONE_SMALL = [
@@ -185,6 +247,10 @@
     });
   }
 
+  var FLY_HIGH = GROUND_Y - 60;
+  var FLY_MID = GROUND_Y - 40;
+  var FLY_LOW = GROUND_Y - 22;
+
   function drawPixels(sprite, x, y, color, scale) {
     var ps = scale || S;
     ctx.fillStyle = color || FG;
@@ -216,26 +282,39 @@
     }
   }
 
-  var OBSTACLE_TYPES = [
+  var GROUND_OBSTACLES = [
     { sprite: TOMBSTONE_SMALL, name: 'small' },
     { sprite: CROSS, name: 'cross' },
     { sprite: TOMBSTONE_DOUBLE, name: 'double' }
   ];
 
   function spawnObstacle() {
-    var type;
     var r = Math.random();
+
+    if (score > 80 && r < 0.35) {
+      var flyR = Math.random();
+      var flyY = flyR < 0.33 ? FLY_LOW : (flyR < 0.66 ? FLY_MID : FLY_HIGH);
+      var isSkull = Math.random() > 0.5;
+      var sprite1 = isSkull ? WINGED_SKULL1 : BAT1;
+      var sprite2 = isSkull ? WINGED_SKULL2 : BAT2;
+      var h = sprite1.length * S;
+      var w = sprite1[0].length * S;
+      obstacles.push({ x: GAME_W + 10, y: flyY, w: w, h: h, sprite: sprite1, sprite2: sprite2, flying: true, flyFrame: 0, flyTimer: 0 });
+      return;
+    }
+
+    var type;
     if (score < 50) {
-      type = r > 0.3 ? OBSTACLE_TYPES[0] : OBSTACLE_TYPES[1];
+      type = r > 0.3 ? GROUND_OBSTACLES[0] : GROUND_OBSTACLES[1];
     } else {
-      if (r < 0.4) type = OBSTACLE_TYPES[0];
-      else if (r < 0.7) type = OBSTACLE_TYPES[1];
-      else type = OBSTACLE_TYPES[2];
+      if (r < 0.4) type = GROUND_OBSTACLES[0];
+      else if (r < 0.7) type = GROUND_OBSTACLES[1];
+      else type = GROUND_OBSTACLES[2];
     }
     var sprite = type.sprite;
-    var h = sprite.length * S;
-    var w = sprite[0].length * S;
-    obstacles.push({ x: GAME_W + 10, y: GROUND_Y - h + FEET_BELOW, w: w, h: h, sprite: sprite });
+    var h2 = sprite.length * S;
+    var w2 = sprite[0].length * S;
+    obstacles.push({ x: GAME_W + 10, y: GROUND_Y - h2 + FEET_BELOW, w: w2, h: h2, sprite: sprite, flying: false });
   }
 
   function getFloorY(spriteRows) {
@@ -247,6 +326,7 @@
     skeleton.vy = 0;
     skeleton.jumping = false;
     skeleton.frame = 0;
+    ducking = false;
     obstacles = [];
     obstacleTimer = 0;
     nextObstacleIn = 60;
@@ -258,6 +338,7 @@
   }
 
   function jump() {
+    if (ducking) return;
     if (!skeleton.jumping && gameRunning && !gameOver) {
       skeleton.vy = JUMP_FORCE;
       skeleton.jumping = true;
@@ -265,6 +346,16 @@
     if (gameOver) {
       reset();
     }
+  }
+
+  function startDuck() {
+    if (!skeleton.jumping && gameRunning && !gameOver) {
+      ducking = true;
+    }
+  }
+
+  function stopDuck() {
+    ducking = false;
   }
 
   function updateStartingAnimation() {
@@ -290,7 +381,8 @@
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
 
-    var floorY = getFloorY(SKEL_RUN1.length);
+    var floorSprite = ducking ? SKEL_DUCK : SKEL_RUN1;
+    var floorY = getFloorY(floorSprite.length);
     if (skeleton.y >= floorY) {
       skeleton.y = floorY;
       skeleton.vy = 0;
@@ -315,16 +407,26 @@
     }
 
     for (var i = obstacles.length - 1; i >= 0; i--) {
-      obstacles[i].x -= speed;
-      if (obstacles[i].x + obstacles[i].w < -10) {
+      var o = obstacles[i];
+      o.x -= speed;
+      if (o.flying) {
+        o.flyTimer++;
+        if (o.flyTimer > 8) {
+          o.flyFrame = 1 - o.flyFrame;
+          o.flyTimer = 0;
+        }
+      }
+      if (o.x + o.w < -10) {
         obstacles.splice(i, 1);
       }
     }
 
-    var spriteH = SKEL_RUN1.length * S;
-    var skW = 10 * S;
-    var skX = skeleton.x + 1 * S;
-    var skY = skeleton.y + 1 * S;
+    var currentSprite = ducking ? SKEL_DUCK : SKEL_RUN1;
+    var spriteH = currentSprite.length * S;
+    var spriteW = currentSprite[0].length * S;
+    var skX = skeleton.x + 2 * S;
+    var skY = skeleton.y + 2 * S;
+    var skW = (currentSprite[0].length - 4) * S;
     var skH = spriteH - 4 * S;
 
     for (var j = 0; j < obstacles.length; j++) {
@@ -332,12 +434,16 @@
       var oX = obs.x + 2;
       var oY = obs.y + 2;
       var oW = obs.w - 4;
-      var oH = obs.h - 2;
+      var oH = obs.h - 4;
       if (skX < oX + oW && skX + skW > oX && skY < oY + oH && skY + skH > oY) {
         gameOver = true;
         if (score > highScore) highScore = score;
       }
     }
+  }
+
+  function isInGap(x, gapLeft, gapRight) {
+    return x >= gapLeft - 2 && x <= gapRight + 2;
   }
 
   function draw() {
@@ -347,6 +453,18 @@
     ctx.fillStyle = FG;
     var skelLeft = skeleton.x - 1;
     var skelRight = skeleton.x + 12 * S + 1;
+
+    var gaps = [];
+    if (!skeleton.jumping) {
+      gaps.push({ l: skelLeft, r: skelRight });
+    }
+    if (gameRunning || gameOver) {
+      for (var g = 0; g < obstacles.length; g++) {
+        if (!obstacles[g].flying) {
+          gaps.push({ l: obstacles[g].x - 1, r: obstacles[g].x + obstacles[g].w + 1 });
+        }
+      }
+    }
 
     if (!gameRunning && !gameOver && !gameStarting) {
       var skelCenter = skeleton.x + 6 * S;
@@ -361,16 +479,22 @@
       ctx.fillRect(lineStart2, GROUND_Y, skelLeft - lineStart2, 1);
       ctx.fillRect(skelRight, GROUND_Y, groundExtend - skelRight, 1);
     } else {
-      if (!skeleton.jumping) {
-        ctx.fillRect(0, GROUND_Y, skelLeft, 1);
-        ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
-      } else {
-        ctx.fillRect(0, GROUND_Y, GAME_W, 1);
+      var lineX = 0;
+      gaps.sort(function(a, b) { return a.l - b.l; });
+      for (var gi = 0; gi < gaps.length; gi++) {
+        var gap = gaps[gi];
+        if (gap.l > lineX) {
+          ctx.fillRect(lineX, GROUND_Y, gap.l - lineX, 1);
+        }
+        lineX = Math.max(lineX, gap.r);
+      }
+      if (lineX < GAME_W) {
+        ctx.fillRect(lineX, GROUND_Y, GAME_W - lineX, 1);
       }
     }
 
-    for (var i = 0; i < GROUND_BUMPS.length; i++) {
-      var b = GROUND_BUMPS[i];
+    for (var bi = 0; bi < GROUND_BUMPS.length; bi++) {
+      var b = GROUND_BUMPS[bi];
       var bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
       var drawX = bx < -10 ? bx + GAME_W + 100 : bx;
       if (drawX >= 0 && drawX < GAME_W) {
@@ -394,6 +518,8 @@
     var sprite;
     if (!gameRunning && !gameOver && !gameStarting) {
       sprite = SKEL_IDLE;
+    } else if (ducking && !skeleton.jumping) {
+      sprite = SKEL_DUCK;
     } else if (skeleton.jumping) {
       sprite = SKEL_JUMP;
     } else {
@@ -402,7 +528,13 @@
     drawPixels(sprite, skeleton.x, skeleton.y);
 
     for (var k = 0; k < obstacles.length; k++) {
-      drawPixels(obstacles[k].sprite, obstacles[k].x, obstacles[k].y);
+      var ob = obstacles[k];
+      if (ob.flying) {
+        var fSprite = ob.flyFrame === 0 ? ob.sprite : ob.sprite2;
+        drawPixels(fSprite, ob.x, ob.y);
+      } else {
+        drawPixels(ob.sprite, ob.x, ob.y);
+      }
     }
 
     if (gameRunning || gameOver) {
@@ -451,17 +583,23 @@
   }
 
   document.addEventListener('keydown', function(e) {
-    if (e.code === 'Space' && document.activeElement !== document.getElementById('birthInput')) {
+    var birth = document.getElementById('birthInput');
+    if (document.activeElement === birth) return;
+    if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
       if (!gameRunning && !gameOver && !gameStarting) startOpening();
       else if (gameRunning) jump();
       else if (gameOver) reset();
     }
-    if (e.code === 'ArrowUp' && document.activeElement !== document.getElementById('birthInput')) {
+    if (e.code === 'ArrowDown') {
       e.preventDefault();
-      if (!gameRunning && !gameOver && !gameStarting) startOpening();
-      else if (gameRunning) jump();
-      else if (gameOver) reset();
+      if (gameRunning) startDuck();
+    }
+  });
+
+  document.addEventListener('keyup', function(e) {
+    if (e.code === 'ArrowDown') {
+      stopDuck();
     }
   });
 
