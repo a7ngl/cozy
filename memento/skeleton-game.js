@@ -15,6 +15,9 @@
 
   var GROUND_Y = 118;
   var FEET_BELOW = 3 * S;
+  var GRAVITY = 0.6;
+  var JUMP_FORCE = -10;
+  var MAX_SPEED = 14;
 
   var gameRunning = false;
   var gameOver = false;
@@ -23,15 +26,49 @@
   var highScore = 0;
   var speed = 6;
   var frameCount = 0;
+  var groundOffset = 0;
+  var lastMilestone = 0;
 
-  var skeleton = { x: isMobile ? 30 : 40, y: 0, vy: 0, jumping: false, frame: 0, frameTimer: 0 };
-
-  var GRAVITY = 0.6;
-  var JUMP_FORCE = -10;
+  var skeleton = { x: isMobile ? 30 : 50, y: 0, vy: 0, jumping: false, frame: 0, frameTimer: 0 };
 
   var obstacles = [];
   var obstacleTimer = 0;
-  var nextObstacleIn = 50;
+  var nextObstacleIn = 60;
+
+  var clouds = [];
+  var cloudTimer = 0;
+
+  var audioCtx = null;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function playTone(freq, duration, type) {
+    try {
+      var ac = getAudio();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.type = type || 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.15, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime + duration);
+    } catch(e) {}
+  }
+  function playJump() { playTone(440, 0.12, 'sine'); }
+  function playDie() {
+    playTone(200, 0.1, 'square');
+    setTimeout(function() { playTone(150, 0.15, 'square'); }, 100);
+    setTimeout(function() { playTone(100, 0.2, 'square'); }, 220);
+  }
+  function playMilestone() {
+    playTone(660, 0.08, 'square');
+    setTimeout(function() { playTone(880, 0.08, 'square'); }, 90);
+    setTimeout(function() { playTone(1100, 0.12, 'square'); }, 180);
+  }
 
   var SKEL_IDLE = [
     [0,0,0,1,1,1,1,1,1,0,0,0],
@@ -206,26 +243,33 @@
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
   ];
 
+  var CLOUD = [
+    [0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0]
+  ];
+
   var DIGITS = {
-    '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-    '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
-    '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-    '3': [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
-    '4': [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-    '5': [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-    '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-    '7': [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
-    '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-    '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
+    '0':[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+    '1':[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
+    '2':[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+    '3':[[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    '4':[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+    '5':[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+    '6':[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+    '7':[[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
+    '8':[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+    '9':[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
   };
 
-  var groundOffset = 0;
   var GROUND_BUMPS = [];
   for (var i = 0; i < 80; i++) {
     GROUND_BUMPS.push({
       x: i * 12 + Math.random() * 6,
-      h: 1,
-      w: Math.random() > 0.5 ? 2 : 1,
+      h: 1, w: Math.random() > 0.5 ? 2 : 1,
       yOff: Math.floor(Math.random() * 3)
     });
   }
@@ -237,9 +281,7 @@
     ctx.fillStyle = color || FG;
     for (var r = 0; r < sprite.length; r++) {
       for (var c = 0; c < sprite[r].length; c++) {
-        if (sprite[r][c]) {
-          ctx.fillRect(Math.floor(x + c * ps), Math.floor(y + r * ps), ps, ps);
-        }
+        if (sprite[r][c]) ctx.fillRect(Math.floor(x + c * ps), Math.floor(y + r * ps), ps, ps);
       }
     }
   }
@@ -249,127 +291,94 @@
     var s = String(Math.floor(score)).padStart(5, '0');
     var digitW = (3 + 1) * DS;
     var startX = GAME_W - 15 - s.length * digitW;
-
     if (highScore > 0) {
       var hs = String(Math.floor(highScore)).padStart(5, '0');
       var hiX = startX - 12 - hs.length * digitW;
-      for (var i = 0; i < hs.length; i++) {
-        drawPixels(DIGITS[hs[i]], hiX + i * digitW, 8, '#9b9590', DS);
-      }
+      for (var i = 0; i < hs.length; i++) drawPixels(DIGITS[hs[i]], hiX + i * digitW, 8, '#9b9590', DS);
     }
-
-    for (var i = 0; i < s.length; i++) {
-      drawPixels(DIGITS[s[i]], startX + i * digitW, 8, FG, DS);
-    }
+    for (var i = 0; i < s.length; i++) drawPixels(DIGITS[s[i]], startX + i * digitW, 8, FG, DS);
   }
 
-  var GROUND_OBSTACLES = [
-    { sprite: TOMBSTONE_SMALL, name: 'small' },
-    { sprite: CROSS, name: 'cross' },
-    { sprite: TOMBSTONE_DOUBLE, name: 'double' }
-  ];
+  function getFloorY(rows) { return GROUND_Y - rows * S + FEET_BELOW; }
+
+  function spawnCloud() {
+    clouds.push({
+      x: GAME_W + 10,
+      y: 15 + Math.random() * 35,
+      speed: 1.5 + Math.random()
+    });
+  }
 
   function spawnObstacle() {
     var r = Math.random();
-
     if (score > 80 && r < 0.3) {
       var isSkull = Math.random() > 0.5;
-      var sprite1 = isSkull ? WINGED_SKULL1 : BAT1;
-      var sprite2 = isSkull ? WINGED_SKULL2 : BAT2;
-      var h = sprite1.length * S;
-      var w = sprite1[0].length * S;
-      obstacles.push({ x: GAME_W + 10, y: FLY_Y, w: w, h: h, sprite: sprite1, sprite2: sprite2, flying: true, flyFrame: 0, flyTimer: 0 });
+      var sp1 = isSkull ? WINGED_SKULL1 : BAT1;
+      var sp2 = isSkull ? WINGED_SKULL2 : BAT2;
+      obstacles.push({ x: GAME_W + 10, y: FLY_Y, w: sp1[0].length * S, h: sp1.length * S, sprite: sp1, sprite2: sp2, flying: true, flyFrame: 0, flyTimer: 0 });
       return;
     }
-
+    var types = [TOMBSTONE_SMALL, CROSS, TOMBSTONE_DOUBLE];
     var type;
-    if (score < 50) {
-      type = r > 0.3 ? GROUND_OBSTACLES[0] : GROUND_OBSTACLES[1];
-    } else {
-      if (r < 0.4) type = GROUND_OBSTACLES[0];
-      else if (r < 0.7) type = GROUND_OBSTACLES[1];
-      else type = GROUND_OBSTACLES[2];
-    }
-    var sprite = type.sprite;
-    var h2 = sprite.length * S;
-    var w2 = sprite[0].length * S;
-    obstacles.push({ x: GAME_W + 10, y: GROUND_Y - h2 + FEET_BELOW, w: w2, h: h2, sprite: sprite, flying: false });
-  }
-
-  function getFloorY(spriteRows) {
-    return GROUND_Y - spriteRows * S + FEET_BELOW;
+    if (score < 50) type = r > 0.3 ? types[0] : types[1];
+    else { if (r < 0.4) type = types[0]; else if (r < 0.7) type = types[1]; else type = types[2]; }
+    obstacles.push({ x: GAME_W + 10, y: GROUND_Y - type.length * S + FEET_BELOW, w: type[0].length * S, h: type.length * S, sprite: type, flying: false });
   }
 
   function reset() {
     skeleton.y = getFloorY(SKEL_RUN1.length);
-    skeleton.vy = 0;
-    skeleton.jumping = false;
-    skeleton.frame = 0;
-    obstacles = [];
-    obstacleTimer = 0;
-    nextObstacleIn = 60;
-    score = 0;
-    speed = 6;
-    gameOver = false;
-    gameRunning = true;
-    groundOffset = 0;
+    skeleton.vy = 0; skeleton.jumping = false; skeleton.frame = 0;
+    obstacles = []; clouds = [];
+    obstacleTimer = 0; nextObstacleIn = 60;
+    cloudTimer = 0;
+    score = 0; speed = 6;
+    gameOver = false; gameRunning = true;
+    groundOffset = 0; lastMilestone = 0;
   }
 
   function jump() {
     if (!skeleton.jumping && gameRunning && !gameOver) {
       skeleton.vy = JUMP_FORCE;
       skeleton.jumping = true;
+      playJump();
     }
-    if (gameOver) {
-      reset();
-    }
-  }
-
-  function updateStartingAnimation() {
-    skeleton.vy += GRAVITY;
-    skeleton.y += skeleton.vy;
-    var floorY = getFloorY(SKEL_RUN1.length);
-    if (skeleton.y >= floorY) {
-      skeleton.y = floorY;
-      skeleton.vy = 0;
-      skeleton.jumping = false;
-    }
-    skeleton.frameTimer++;
-    if (skeleton.frameTimer > 6) {
-      skeleton.frame = 1 - skeleton.frame;
-      skeleton.frameTimer = 0;
-    }
+    if (gameOver) reset();
   }
 
   function update() {
     if (gameStarting) {
-      updateStartingAnimation();
+      skeleton.vy += GRAVITY;
+      skeleton.y += skeleton.vy;
+      var fy = getFloorY(SKEL_RUN1.length);
+      if (skeleton.y >= fy) { skeleton.y = fy; skeleton.vy = 0; skeleton.jumping = false; }
+      skeleton.frameTimer++;
+      if (skeleton.frameTimer > 6) { skeleton.frame = 1 - skeleton.frame; skeleton.frameTimer = 0; }
       return;
     }
     if (!gameRunning || gameOver) return;
 
-    frameCount++;
     score += speed * 0.015;
-    speed = 6 + score * 0.008;
-    if (speed > 14) speed = 14;
+    speed = Math.min(6 + score * 0.008, MAX_SPEED);
+
+    var milestone = Math.floor(score / 100) * 100;
+    if (milestone > 0 && milestone > lastMilestone) { lastMilestone = milestone; playMilestone(); }
 
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
-
     var floorY = getFloorY(SKEL_RUN1.length);
-    if (skeleton.y >= floorY) {
-      skeleton.y = floorY;
-      skeleton.vy = 0;
-      skeleton.jumping = false;
-    }
+    if (skeleton.y >= floorY) { skeleton.y = floorY; skeleton.vy = 0; skeleton.jumping = false; }
 
     skeleton.frameTimer++;
-    if (skeleton.frameTimer > 6) {
-      skeleton.frame = 1 - skeleton.frame;
-      skeleton.frameTimer = 0;
-    }
+    if (skeleton.frameTimer > 6) { skeleton.frame = 1 - skeleton.frame; skeleton.frameTimer = 0; }
 
     groundOffset += speed;
+
+    cloudTimer++;
+    if (cloudTimer > 60 + Math.random() * 60) { spawnCloud(); cloudTimer = 0; }
+    for (var ci = clouds.length - 1; ci >= 0; ci--) {
+      clouds[ci].x -= clouds[ci].speed;
+      if (clouds[ci].x + CLOUD[0].length * S < 0) clouds.splice(ci, 1);
+    }
 
     obstacleTimer++;
     var minGap = Math.max(40, 60 - score * 0.05);
@@ -383,33 +392,18 @@
     for (var i = obstacles.length - 1; i >= 0; i--) {
       var o = obstacles[i];
       o.x -= speed;
-      if (o.flying) {
-        o.flyTimer++;
-        if (o.flyTimer > 8) {
-          o.flyFrame = 1 - o.flyFrame;
-          o.flyTimer = 0;
-        }
-      }
-      if (o.x + o.w < -10) {
-        obstacles.splice(i, 1);
-      }
+      if (o.flying) { o.flyTimer++; if (o.flyTimer > 8) { o.flyFrame = 1 - o.flyFrame; o.flyTimer = 0; } }
+      if (o.x + o.w < -10) obstacles.splice(i, 1);
     }
 
-    var spriteH = SKEL_RUN1.length * S;
-    var skX = skeleton.x + 2 * S;
-    var skY = skeleton.y + 2 * S;
-    var skW = 8 * S;
-    var skH = spriteH - 4 * S;
-
+    var skX = skeleton.x + 2 * S, skY = skeleton.y + 2 * S;
+    var skW = 8 * S, skH = SKEL_RUN1.length * S - 4 * S;
     for (var j = 0; j < obstacles.length; j++) {
       var obs = obstacles[j];
-      var oX = obs.x + 2;
-      var oY = obs.y + 2;
-      var oW = obs.w - 4;
-      var oH = obs.h - 4;
-      if (skX < oX + oW && skX + skW > oX && skY < oY + oH && skY + skH > oY) {
+      if (skX < obs.x + obs.w - 2 && skX + skW > obs.x + 2 && skY < obs.y + obs.h - 2 && skY + skH > obs.y + 2) {
         gameOver = true;
         if (score > highScore) highScore = score;
+        playDie();
       }
     }
   }
@@ -418,21 +412,20 @@
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, GAME_W, GAME_H);
 
+    for (var ci = 0; ci < clouds.length; ci++) {
+      drawPixels(CLOUD, Math.floor(clouds[ci].x), Math.floor(clouds[ci].y), '#c8c3b8', 1);
+    }
+
     ctx.fillStyle = FG;
     var skelLeft = skeleton.x - 1;
     var skelRight = skeleton.x + 12 * S + 1;
-
     var gaps = [];
-    if (!skeleton.jumping) {
-      gaps.push({ l: skelLeft, r: skelRight });
-    }
+    if (!skeleton.jumping) gaps.push({ l: skelLeft, r: skelRight });
 
     if (!gameRunning && !gameOver && !gameStarting) {
-      var skelCenter = skeleton.x + 6 * S;
-      var lineW = 14 * S + 40;
-      var lineStart = skelCenter - lineW / 2;
-      ctx.fillRect(lineStart, GROUND_Y, skelLeft - lineStart, 1);
-      ctx.fillRect(skelRight, GROUND_Y, lineStart + lineW - skelRight, 1);
+      var sc = skeleton.x + 6 * S, lw = 14 * S + 40, ls = sc - lw / 2;
+      ctx.fillRect(ls, GROUND_Y, skelLeft - ls, 1);
+      ctx.fillRect(skelRight, GROUND_Y, ls + lw - skelRight, 1);
     } else if (gameStarting) {
       ctx.fillRect(0, GROUND_Y, skelLeft, 1);
       ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
@@ -440,15 +433,10 @@
       var lineX = 0;
       gaps.sort(function(a, b) { return a.l - b.l; });
       for (var gi = 0; gi < gaps.length; gi++) {
-        var gap = gaps[gi];
-        if (gap.l > lineX) {
-          ctx.fillRect(lineX, GROUND_Y, gap.l - lineX, 1);
-        }
-        lineX = Math.max(lineX, gap.r);
+        if (gaps[gi].l > lineX) ctx.fillRect(lineX, GROUND_Y, gaps[gi].l - lineX, 1);
+        lineX = Math.max(lineX, gaps[gi].r);
       }
-      if (lineX < GAME_W) {
-        ctx.fillRect(lineX, GROUND_Y, GAME_W - lineX, 1);
-      }
+      if (lineX < GAME_W) ctx.fillRect(lineX, GROUND_Y, GAME_W - lineX, 1);
     }
 
     for (var bi = 0; bi < GROUND_BUMPS.length; bi++) {
@@ -457,14 +445,8 @@
       var drawX = bx < -10 ? bx + GAME_W + 100 : bx;
       if (drawX >= 0 && drawX < GAME_W) {
         if (!gameRunning && !gameOver && !gameStarting) {
-          var sc = skeleton.x + 6 * S;
-          var lw = 14 * S + 40;
-          var ls = sc - lw / 2;
-          if (drawX >= ls && drawX <= ls + lw) {
-            ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
-          }
-        } else if (gameStarting) {
-          ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
+          var sc2 = skeleton.x + 6 * S, lw2 = 14 * S + 40, ls2 = sc2 - lw2 / 2;
+          if (drawX >= ls2 && drawX <= ls2 + lw2) ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
         } else {
           ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
         }
@@ -472,28 +454,17 @@
     }
 
     var sprite;
-    if (!gameRunning && !gameOver && !gameStarting) {
-      sprite = SKEL_IDLE;
-    } else if (skeleton.jumping) {
-      sprite = SKEL_JUMP;
-    } else {
-      sprite = skeleton.frame === 0 ? SKEL_RUN1 : SKEL_RUN2;
-    }
+    if (!gameRunning && !gameOver && !gameStarting) sprite = SKEL_IDLE;
+    else if (skeleton.jumping) sprite = SKEL_JUMP;
+    else sprite = skeleton.frame === 0 ? SKEL_RUN1 : SKEL_RUN2;
     drawPixels(sprite, skeleton.x, skeleton.y);
 
     for (var k = 0; k < obstacles.length; k++) {
       var ob = obstacles[k];
-      if (ob.flying) {
-        var fSprite = ob.flyFrame === 0 ? ob.sprite : ob.sprite2;
-        drawPixels(fSprite, ob.x, ob.y);
-      } else {
-        drawPixels(ob.sprite, ob.x, ob.y);
-      }
+      drawPixels(ob.flying ? (ob.flyFrame === 0 ? ob.sprite : ob.sprite2) : ob.sprite, ob.x, ob.y);
     }
 
-    if (gameRunning || gameOver) {
-      drawScore();
-    }
+    if (gameRunning || gameOver) drawScore();
 
     if (gameOver) {
       ctx.fillStyle = FG;
@@ -510,11 +481,7 @@
     }
   }
 
-  function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-  }
+  function loop() { update(); draw(); requestAnimationFrame(loop); }
 
   function startOpening() {
     if (gameStarting || gameRunning) return;
@@ -522,24 +489,32 @@
     skeleton.y = getFloorY(SKEL_RUN1.length);
     skeleton.vy = JUMP_FORCE;
     skeleton.jumping = true;
+    playJump();
+
     var container = canvas.parentElement;
-    container.classList.add('intro-active');
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        container.classList.add('intro-done');
-        container.addEventListener('transitionend', function onDone() {
-          container.removeEventListener('transitionend', onDone);
-          container.classList.remove('intro-active', 'intro-done');
-          gameStarting = false;
-          reset();
-        });
-      });
+    var displayScale = container.offsetWidth / GAME_W;
+    var skelEndPx = Math.ceil((skeleton.x + 12 * S + 4) * displayScale);
+    var fullPx = container.offsetWidth;
+
+    var styleEl = document.createElement('style');
+    styleEl.innerHTML = '@keyframes skelIntro{from{width:' + skelEndPx + 'px}to{width:' + fullPx + 'px}}';
+    document.head.appendChild(styleEl);
+
+    container.style.width = skelEndPx + 'px';
+    container.style.animation = 'skelIntro 1.5s ease-out 1 both';
+
+    container.addEventListener('animationend', function onDone() {
+      container.removeEventListener('animationend', onDone);
+      container.style.animation = '';
+      container.style.width = '';
+      styleEl.remove();
+      gameStarting = false;
+      reset();
     });
   }
 
   document.addEventListener('keydown', function(e) {
-    var birth = document.getElementById('birthInput');
-    if (document.activeElement === birth) return;
+    if (document.activeElement === document.getElementById('birthInput')) return;
     if (e.code === 'Space' || e.code === 'ArrowUp') {
       e.preventDefault();
       if (!gameRunning && !gameOver && !gameStarting) startOpening();
@@ -562,30 +537,20 @@
   }, { passive: false });
 
   var loopStarted = false;
-
   function initGame() {
     skeleton.y = getFloorY(SKEL_IDLE.length);
     draw();
-    if (!loopStarted) {
-      loopStarted = true;
-      loop();
-    }
+    if (!loopStarted) { loopStarted = true; loop(); }
   }
 
   var page2 = document.getElementById('page2');
   if (page2) {
-    var observer = new MutationObserver(function() {
-      if (!page2.classList.contains('hidden')) {
-        setTimeout(initGame, 50);
-      }
-    });
-    observer.observe(page2, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(function() {
+      if (!page2.classList.contains('hidden')) setTimeout(initGame, 50);
+    }).observe(page2, { attributes: true, attributeFilter: ['class'] });
   }
 
   initGame();
 
-  window.stopSkeletonGame = function() {
-    gameRunning = false;
-    gameOver = false;
-  };
+  window.stopSkeletonGame = function() { gameRunning = false; gameOver = false; };
 })();
