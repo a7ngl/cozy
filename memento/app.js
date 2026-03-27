@@ -14,8 +14,8 @@ setTimeout(() => {
   setTimeout(() => {
     page1.classList.add('hidden');
     document.getElementById('birthInput').focus();
-  }, 1000);
-}, 4200);
+  }, 500);
+}, 4500);
 
 // Page 2 -> Dashboard
 const birthInput = document.getElementById('birthInput');
@@ -60,7 +60,7 @@ enterBtn.addEventListener('click', () => {
   initDashboard();
   setTimeout(() => {
     page2.classList.add('hidden');
-  }, 1000);
+  }, 500);
 });
 
 function initDashboard() {
