@@ -62,7 +62,7 @@ body {
 #gameCanvas {
   display: block;
   width: 100%;
-  height: 125px;
+  aspect-ratio: 4 / 1;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -568,9 +568,6 @@ body {
     font-size: 11px;
   }
 
-  #gameCanvas {
-    height: 150px;
-  }
 
   .dashboard {
     padding: 20px 16px;
