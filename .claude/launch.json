@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "time-dashboard",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "/Users/amel/claudework/time-dashboard", "-l", "3847"],
+      "port": 3847
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MEMENTO</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Page 1: Title -->
+  <div class="landing-page" id="page1">
+    <div class="page1-content">
+      <h1 class="page1-title">MEMENTO</h1>
+      <p class="page1-subtitle">Remember, you must die.</p>
+    </div>
+  </div>
+
+  <!-- Page 2: Birth Input -->
+  <div class="landing-page hidden" id="page2">
+    <div class="page2-content">
+      <p class="page2-label">DATE OF BIRTH</p>
+      <input type="text" id="birthInput" class="page2-input" placeholder="DD/MM/YYYY" maxlength="10" autocomplete="off">
+      <button class="page2-btn" id="enterBtn">Enter</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard hidden" id="dashboard">
+    <header class="header">
+      <div class="header-left">
+        <h1>MEMENTO</h1>
+        <p class="subtitle">Remember, you must die.</p>
+      </div>
+      <div class="header-right">
+        <span class="born-label">BORN</span>
+        <span class="born-date" id="bornDisplay">--</span>
+        <span class="status-dot"></span>
+        <span class="status-text">LIVE</span>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">LIFE IN WEEKS</span>
+        <div class="weeks-legend">
+          <span class="legend-item"><span class="legend-dot lived"></span> Lived</span>
+          <span class="legend-item"><span class="legend-dot remaining"></span> Remaining</span>
+        </div>
+      </div>
+      <div class="weeks-grid" id="weeksGrid"></div>
+      <p class="card-note" id="weeksNote">-- weeks lived of -- total</p>
+      <p class="card-note weeks-expectancy">Based on avg. life expectancy of 78 years</p>
+    </section>
+
+    <section class="card death-card">
+      <span class="card-label">ESTIMATED TIME REMAINING</span>
+      <div class="death-countdown">
+        <div class="countdown-unit">
+          <span class="countdown-num" id="deathYears">--</span>
+          <span class="countdown-label">years</span>
+        </div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-unit">
+          <span class="countdown-num" id="deathDays">--</span>
+          <span class="countdown-label">days</span>
+        </div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-unit">
+          <span class="countdown-num" id="deathHours">--</span>
+          <span class="countdown-label">hours</span>
+        </div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-unit">
+          <span class="countdown-num" id="deathMins">--</span>
+          <span class="countdown-label">min</span>
+        </div>
+        <div class="countdown-sep">:</div>
+        <div class="countdown-unit">
+          <span class="countdown-num" id="deathSecs">--</span>
+          <span class="countdown-label">sec</span>
+        </div>
+      </div>
+      <div class="drain-bar">
+        <div class="drain-fill" id="drainFill"></div>
+      </div>
+      <p class="card-note" id="drainText">Draining...</p>
+    </section>
+
+    <section class="card progress-card">
+      <span class="card-label">LIFE PROGRESS</span>
+      <div class="progress-row">
+        <div class="progress-left">
+          <div class="life-percent">
+            <span class="big-number" id="lifePercent">--</span>
+            <span class="percent-sign">%</span>
+          </div>
+          <p class="progress-sub">of your life has passed</p>
+        </div>
+        <div class="birth-stats">
+          <div class="stat-row">
+            <span class="stat-label">Days alive</span>
+            <span class="stat-value" id="daysAlive">--</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Weeks alive</span>
+            <span class="stat-value" id="weeksAlive">--</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Months alive</span>
+            <span class="stat-value" id="monthsAlive">--</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Age</span>
+            <span class="stat-value" id="ageText">--</span>
+          </div>
+        </div>
+      </div>
+      <div class="life-bar">
+        <div class="life-bar-fill" id="lifeFill"></div>
+        <span class="life-bar-label" id="lifeBarLabel">--%</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <span class="card-label">2026 YEAR PROGRESS</span>
+        <span class="year-percent" id="yearPercent">--% complete</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="yearFill"></div>
+      </div>
+      <div class="progress-labels">
+        <span>Jan 1</span>
+        <span class="current-day" id="currentDay">Day -- of 365</span>
+        <span>Dec 31</span>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
