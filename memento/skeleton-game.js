@@ -16,15 +16,15 @@
   let frameCount = 0;
 
   // Ground
-  const GROUND_Y_OFFSET = 20;
+  const GROUND_Y_OFFSET = 30;
   let groundY;
 
   // Skeleton player
   const skeleton = {
     x: 40,
     y: 0,
-    w: 20,
-    h: 24,
+    w: 10,
+    h: 14,
     vy: 0,
     jumping: false,
     frame: 0,
@@ -305,7 +305,7 @@
     }
 
     // Collision
-    const skX = skeleton.x * SCALE;
+    const skX = skeleton.x;
     const skY = skeleton.y;
     const skW = skeleton.w * SCALE * 0.6;
     const skH = skeleton.h * SCALE * 0.8;
@@ -347,7 +347,7 @@
     } else {
       sprite = skeleton.frame === 0 ? SKELETON_RUN1 : SKELETON_RUN2;
     }
-    drawSprite(sprite, skeleton.x * SCALE, skeleton.y, SCALE);
+    drawSprite(sprite, skeleton.x, skeleton.y, SCALE);
 
     // Obstacles
     for (let obs of obstacles) {
