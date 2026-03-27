@@ -388,12 +388,29 @@
       }
     }
 
-    // Ground bumps (only when ground is full)
-    if (gameRunning || gameOver) {
-      for (let b of GROUND_BUMPS) {
-        const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
-        const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
-        if (drawX >= 0 && drawX < GAME_W) {
+    // Ground bumps (always show)
+    for (let b of GROUND_BUMPS) {
+      const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
+      const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
+      if (drawX >= 0 && drawX < GAME_W) {
+        // During opening, only show bumps within the extended ground
+        if (!gameRunning && !gameOver && !gameStarting) {
+          const skelCenter = skeleton.x + 6 * S;
+          const lineW = 14 * S + 40;
+          const lineStart = skelCenter - lineW / 2;
+          const lineEnd = lineStart + lineW;
+          if (drawX >= lineStart && drawX <= lineEnd) {
+            ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
+          }
+        } else if (gameStarting) {
+          const skelCenter = skeleton.x + 6 * S;
+          const halfExtend = groundExtend / 2;
+          const startX = Math.max(0, skelCenter - halfExtend);
+          const endX = Math.min(GAME_W, skelCenter + halfExtend);
+          if (drawX >= startX && drawX <= endX) {
+            ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
+          }
+        } else {
           ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
         }
       }
@@ -426,6 +443,14 @@
       ctx.font = 'bold 18px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 5);
+    }
+
+    // Start prompt (idle state)
+    if (!gameRunning && !gameOver && !gameStarting) {
+      ctx.fillStyle = FG;
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('start', GAME_W / 2, GROUND_Y - 5);
     }
   }
 
