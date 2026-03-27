@@ -52,6 +52,22 @@ body {
   animation: fadeUp 1s ease 0.8s forwards;
 }
 
+/* Game canvas */
+.game-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 40px;
+  border: 1px solid #1a1a1a;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 150px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 /* No click hint - auto transition */
 
 /* Page 2 - Input */
