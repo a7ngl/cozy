@@ -23,7 +23,8 @@
   var highScore = 0;
   var speed = 6;
   var frameCount = 0;
-  var groundExtend = 0;
+  var introLeft = 0;
+  var introRight = 0;
 
   var skeleton = { x: isMobile ? 30 : 40, y: 0, vy: 0, jumping: false, frame: 0, frameTimer: 0 };
 
@@ -435,11 +436,8 @@
       ctx.fillRect(lineStart, GROUND_Y, skelLeft - lineStart, 1);
       ctx.fillRect(skelRight, GROUND_Y, lineStart + lineW - skelRight, 1);
     } else if (gameStarting) {
-      var skelCenter2 = skeleton.x + 6 * S;
-      var lineW2 = 14 * S + 40;
-      var lineStart2 = skelCenter2 - lineW2 / 2;
-      ctx.fillRect(lineStart2, GROUND_Y, skelLeft - lineStart2, 1);
-      ctx.fillRect(skelRight, GROUND_Y, groundExtend - skelRight, 1);
+      if (introLeft < skelLeft) ctx.fillRect(introLeft, GROUND_Y, skelLeft - introLeft, 1);
+      ctx.fillRect(skelRight, GROUND_Y, introRight - skelRight, 1);
     } else {
       var lineX = 0;
       gaps.sort(function(a, b) { return a.l - b.l; });
@@ -468,10 +466,7 @@
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else if (gameStarting) {
-          var sc2 = skeleton.x + 6 * S;
-          var lw2 = 14 * S + 40;
-          var ls2 = sc2 - lw2 / 2;
-          if (drawX >= ls2 && drawX <= groundExtend) {
+          if ((drawX >= introLeft && drawX <= skelLeft) || (drawX >= skelRight && drawX <= introRight)) {
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else {
@@ -533,18 +528,28 @@
     skeleton.jumping = true;
     var skelCenter = skeleton.x + 6 * S;
     var lineW = 14 * S + 40;
-    groundExtend = skelCenter + lineW / 2;
-    var openSpeed = 20;
-    function animateOpen() {
-      groundExtend += openSpeed;
-      if (groundExtend >= GAME_W) {
+    introLeft = skelCenter - lineW / 2;
+    introRight = skelCenter + lineW / 2;
+    var startTime = null;
+    var duration = 500;
+    var targetLeft = 0;
+    var targetRight = GAME_W;
+    var initLeft = introLeft;
+    var initRight = introRight;
+    function animateOpen(ts) {
+      if (!startTime) startTime = ts;
+      var progress = Math.min((ts - startTime) / duration, 1);
+      var ease = 1 - Math.pow(1 - progress, 3);
+      introLeft = initLeft - (initLeft - targetLeft) * ease;
+      introRight = initRight + (targetRight - initRight) * ease;
+      if (progress >= 1) {
         gameStarting = false;
         reset();
       } else {
         requestAnimationFrame(animateOpen);
       }
     }
-    animateOpen();
+    requestAnimationFrame(animateOpen);
   }
 
   document.addEventListener('keydown', function(e) {
