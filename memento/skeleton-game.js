@@ -19,7 +19,6 @@
   var gameRunning = false;
   var gameOver = false;
   var gameStarting = false;
-  var ducking = false;
   var score = 0;
   var highScore = 0;
   var speed = 6;
@@ -106,21 +105,6 @@
     [0,0,0,1,1,1,1,1,1,0,0,0],
     [0,0,0,0,1,0,0,1,0,0,0,0],
     [0,0,0,1,1,0,0,1,1,0,0,0]
-  ];
-
-  var SKEL_DUCK = [
-    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0],
-    [0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,1,0,0],
-    [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0],
-    [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0],
-    [0,1,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
-    [1,0,0,0,1,1,1,1,1,0,0,1,0,1,0,0,0,0],
-    [0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,0]
   ];
 
   var WINGED_SKULL1 = [
@@ -247,9 +231,7 @@
     });
   }
 
-  var FLY_HIGH = GROUND_Y - 60;
-  var FLY_MID = GROUND_Y - 40;
-  var FLY_LOW = GROUND_Y - 22;
+  var FLY_Y = GROUND_Y - 42;
 
   function drawPixels(sprite, x, y, color, scale) {
     var ps = scale || S;
@@ -291,15 +273,13 @@
   function spawnObstacle() {
     var r = Math.random();
 
-    if (score > 80 && r < 0.35) {
-      var flyR = Math.random();
-      var flyY = flyR < 0.33 ? FLY_LOW : (flyR < 0.66 ? FLY_MID : FLY_HIGH);
+    if (score > 80 && r < 0.3) {
       var isSkull = Math.random() > 0.5;
       var sprite1 = isSkull ? WINGED_SKULL1 : BAT1;
       var sprite2 = isSkull ? WINGED_SKULL2 : BAT2;
       var h = sprite1.length * S;
       var w = sprite1[0].length * S;
-      obstacles.push({ x: GAME_W + 10, y: flyY, w: w, h: h, sprite: sprite1, sprite2: sprite2, flying: true, flyFrame: 0, flyTimer: 0 });
+      obstacles.push({ x: GAME_W + 10, y: FLY_Y, w: w, h: h, sprite: sprite1, sprite2: sprite2, flying: true, flyFrame: 0, flyTimer: 0 });
       return;
     }
 
@@ -326,7 +306,6 @@
     skeleton.vy = 0;
     skeleton.jumping = false;
     skeleton.frame = 0;
-    ducking = false;
     obstacles = [];
     obstacleTimer = 0;
     nextObstacleIn = 60;
@@ -338,7 +317,6 @@
   }
 
   function jump() {
-    if (ducking) return;
     if (!skeleton.jumping && gameRunning && !gameOver) {
       skeleton.vy = JUMP_FORCE;
       skeleton.jumping = true;
@@ -346,16 +324,6 @@
     if (gameOver) {
       reset();
     }
-  }
-
-  function startDuck() {
-    if (!skeleton.jumping && gameRunning && !gameOver) {
-      ducking = true;
-    }
-  }
-
-  function stopDuck() {
-    ducking = false;
   }
 
   function updateStartingAnimation() {
@@ -376,13 +344,12 @@
     frameCount++;
     score += speed * 0.015;
     speed = 6 + score * 0.008;
-    if (speed > 16) speed = 16;
+    if (speed > 14) speed = 14;
 
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
 
-    var floorSprite = ducking ? SKEL_DUCK : SKEL_RUN1;
-    var floorY = getFloorY(floorSprite.length);
+    var floorY = getFloorY(SKEL_RUN1.length);
     if (skeleton.y >= floorY) {
       skeleton.y = floorY;
       skeleton.vy = 0;
@@ -398,8 +365,8 @@
     groundOffset += speed;
 
     obstacleTimer++;
-    var minGap = Math.max(30, 55 - score * 0.1);
-    var maxGap = Math.max(60, 100 - score * 0.1);
+    var minGap = Math.max(40, 60 - score * 0.05);
+    var maxGap = Math.max(70, 110 - score * 0.05);
     if (obstacleTimer >= nextObstacleIn) {
       spawnObstacle();
       obstacleTimer = 0;
@@ -421,12 +388,10 @@
       }
     }
 
-    var currentSprite = ducking ? SKEL_DUCK : SKEL_RUN1;
-    var spriteH = currentSprite.length * S;
-    var spriteW = currentSprite[0].length * S;
+    var spriteH = SKEL_RUN1.length * S;
     var skX = skeleton.x + 2 * S;
     var skY = skeleton.y + 2 * S;
-    var skW = (currentSprite[0].length - 4) * S;
+    var skW = 8 * S;
     var skH = spriteH - 4 * S;
 
     for (var j = 0; j < obstacles.length; j++) {
@@ -440,10 +405,6 @@
         if (score > highScore) highScore = score;
       }
     }
-  }
-
-  function isInGap(x, gapLeft, gapRight) {
-    return x >= gapLeft - 2 && x <= gapRight + 2;
   }
 
   function draw() {
@@ -518,8 +479,6 @@
     var sprite;
     if (!gameRunning && !gameOver && !gameStarting) {
       sprite = SKEL_IDLE;
-    } else if (ducking && !skeleton.jumping) {
-      sprite = SKEL_DUCK;
     } else if (skeleton.jumping) {
       sprite = SKEL_JUMP;
     } else {
@@ -590,16 +549,6 @@
       if (!gameRunning && !gameOver && !gameStarting) startOpening();
       else if (gameRunning) jump();
       else if (gameOver) reset();
-    }
-    if (e.code === 'ArrowDown') {
-      e.preventDefault();
-      if (gameRunning) startDuck();
-    }
-  });
-
-  document.addEventListener('keyup', function(e) {
-    if (e.code === 'ArrowDown') {
-      stopDuck();
     }
   });
 
