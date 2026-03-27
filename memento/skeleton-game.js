@@ -1,127 +1,113 @@
 (function() {
-  const canvas = document.getElementById('gameCanvas');
+  var canvas = document.getElementById('gameCanvas');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
+  var ctx = canvas.getContext('2d');
 
-  const GAME_W = 600;
-  const GAME_H = 150;
+  var GAME_W = 600;
+  var GAME_H = 150;
   canvas.width = GAME_W;
   canvas.height = GAME_H;
 
-  const FG = '#1a1a1a';
-  const BG_COLOR = '#F5F0E8';
-  const isMobile = window.innerWidth <= 768;
-  const S = isMobile ? 3 : 2;
+  var FG = '#1a1a1a';
+  var BG_COLOR = '#F5F0E8';
+  var isMobile = window.innerWidth <= 768;
+  var S = isMobile ? 3 : 2;
 
-  // Ground line - skeleton feet cross below this, line has gap for skeleton
-  const GROUND_Y = 118;
-  const FEET_BELOW = 3 * S;
+  var GROUND_Y = 118;
+  var FEET_BELOW = 3 * S;
 
-  // Game state
-  let gameRunning = false;
-  let gameOver = false;
-  let gameStarting = false; // for ground opening animation
-  let score = 0;
-  let highScore = 0;
-  let speed = 6;
-  let frameCount = 0;
-  let groundExtend = 0; // 0 to GAME_W for opening animation
+  var gameRunning = false;
+  var gameOver = false;
+  var gameStarting = false;
+  var score = 0;
+  var highScore = 0;
+  var speed = 6;
+  var frameCount = 0;
+  var groundExtend = 0;
 
-  const skeleton = {
-    x: isMobile ? 30 : 40,
-    y: 0,
-    vy: 0,
-    jumping: false,
-    frame: 0,
-    frameTimer: 0
-  };
+  var skeleton = { x: isMobile ? 30 : 40, y: 0, vy: 0, jumping: false, frame: 0, frameTimer: 0 };
 
-  const GRAVITY = 0.6;
-  const JUMP_FORCE = -10;
+  var GRAVITY = 0.6;
+  var JUMP_FORCE = -10;
 
-  let obstacles = [];
-  let obstacleTimer = 0;
-  let nextObstacleIn = 50;
+  var obstacles = [];
+  var obstacleTimer = 0;
+  var nextObstacleIn = 50;
 
-  // Skeleton based on reference - chunky pixel art style
-  // Side view, 12 wide x 16 tall
-  // Chunky skull, visible ribs, proper bone limbs
-
-  const SKEL_IDLE = [
-    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
-    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
-    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
-    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
-    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
-    [0,0,0,1,1,1,1,1,1,0,0,0], // shoulders
-    [0,0,1,0,1,1,1,1,0,1,0,0], // arms + ribs
-    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
-    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
-    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
-    [0,0,0,0,1,0,0,1,0,0,0,0], // upper legs
-    [0,0,0,0,1,0,0,1,0,0,0,0], // legs
-    [0,0,0,1,1,0,0,1,1,0,0,0], // feet
+  var SKEL_IDLE = [
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,1,0,0,1,1,0,0,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,0,1,1,0,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,0,1,1,1,1,0,1,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,1,1,0,0,1,1,0,0,0]
   ];
 
-  const SKEL_RUN1 = [
-    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
-    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
-    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
-    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
-    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
-    [0,1,0,1,1,1,1,1,1,0,0,0], // arm back + shoulders
-    [1,0,0,0,1,1,1,1,0,1,0,0], // arm + ribs
-    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
-    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
-    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
-    [0,0,0,0,1,0,0,0,1,0,0,0], // legs split
-    [0,0,0,1,0,0,0,0,0,1,0,0], // legs wide
-    [0,0,1,1,0,0,0,0,0,0,1,0], // lower legs
-    [0,1,1,0,0,0,0,0,0,0,1,1], // feet
+  var SKEL_RUN1 = [
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,1,0,0,1,1,0,0,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,0,1,1,0,0,0,0,0],
+    [0,1,0,1,1,1,1,1,1,0,0,0],
+    [1,0,0,0,1,1,1,1,0,1,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,0,1,0,0,0],
+    [0,0,0,1,0,0,0,0,0,1,0,0],
+    [0,0,1,1,0,0,0,0,0,0,1,0],
+    [0,1,1,0,0,0,0,0,0,0,1,1]
   ];
 
-  const SKEL_RUN2 = [
-    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
-    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
-    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
-    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
-    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
-    [0,0,0,1,1,1,1,1,1,0,1,0], // shoulders + arm front
-    [0,0,1,0,1,1,1,1,0,0,0,1], // ribs + arm
-    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
-    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
-    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
-    [0,0,0,1,0,0,0,1,0,0,0,0], // legs split
-    [0,0,1,0,0,0,0,0,1,0,0,0], // legs wide
-    [0,1,0,0,0,0,0,0,0,1,1,0], // lower legs
-    [1,1,0,0,0,0,0,0,0,0,1,1], // feet
+  var SKEL_RUN2 = [
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,1,0,0,1,1,0,0,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,0,1,1,0,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,1,0],
+    [0,0,1,0,1,1,1,1,0,0,0,1],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,1,0,0,0,1,0,0,0,0],
+    [0,0,1,0,0,0,0,0,1,0,0,0],
+    [0,1,0,0,0,0,0,0,0,1,1,0],
+    [1,1,0,0,0,0,0,0,0,0,1,1]
   ];
 
-  const SKEL_JUMP = [
-    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
-    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
-    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
-    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
-    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
-    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
-    [0,1,0,1,1,1,1,1,1,0,1,0], // arms up + shoulders
-    [1,0,0,0,1,1,1,1,0,0,0,1], // arms up + ribs
-    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
-    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
-    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
-    [0,0,0,0,1,0,0,1,0,0,0,0], // legs together
-    [0,0,0,1,1,0,0,1,1,0,0,0], // feet tucked
+  var SKEL_JUMP = [
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,1,0,0,1,1,0,0,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,0,1,1,0,0,0,0,0],
+    [0,1,0,1,1,1,1,1,1,0,1,0],
+    [1,0,0,0,1,1,1,1,0,0,0,1],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,1,0,0,1,0,0,0,0],
+    [0,0,0,1,1,0,0,1,1,0,0,0]
   ];
 
-  // Tombstone ~10x14
-  const TOMBSTONE_SMALL = [
+  var TOMBSTONE_SMALL = [
     [0,0,0,1,1,1,1,0,0,0],
     [0,0,1,1,1,1,1,1,0,0],
     [0,1,1,1,1,1,1,1,1,0],
@@ -135,10 +121,10 @@
     [1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1]
   ];
 
-  const CROSS = [
+  var CROSS = [
     [0,0,1,1,0,0],
     [0,0,1,1,0,0],
     [1,1,1,1,1,1],
@@ -155,10 +141,10 @@
     [0,0,1,1,0,0],
     [0,0,1,1,0,0],
     [0,0,1,1,0,0],
-    [0,1,1,1,1,0],
+    [0,1,1,1,1,0]
   ];
 
-  const TOMBSTONE_DOUBLE = [
+  var TOMBSTONE_DOUBLE = [
     [0,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0],
     [0,0,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0],
     [0,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0],
@@ -172,10 +158,10 @@
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
   ];
 
-  const DIGITS = {
+  var DIGITS = {
     '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
     '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
     '2': [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
@@ -185,12 +171,12 @@
     '6': [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
     '7': [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
     '8': [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-    '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
+    '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
   };
 
-  let groundOffset = 0;
-  const GROUND_BUMPS = [];
-  for (let i = 0; i < 200; i++) {
+  var groundOffset = 0;
+  var GROUND_BUMPS = [];
+  for (var i = 0; i < 200; i++) {
     GROUND_BUMPS.push({
       x: i * 5 + Math.random() * 3,
       h: Math.random() > 0.7 ? 2 : 1,
@@ -200,10 +186,10 @@
   }
 
   function drawPixels(sprite, x, y, color, scale) {
-    const ps = scale || S;
+    var ps = scale || S;
     ctx.fillStyle = color || FG;
-    for (let r = 0; r < sprite.length; r++) {
-      for (let c = 0; c < sprite[r].length; c++) {
+    for (var r = 0; r < sprite.length; r++) {
+      for (var c = 0; c < sprite[r].length; c++) {
         if (sprite[r][c]) {
           ctx.fillRect(Math.floor(x + c * ps), Math.floor(y + r * ps), ps, ps);
         }
@@ -212,34 +198,33 @@
   }
 
   function drawScore() {
-    const DS = 2;
-    const s = String(Math.floor(score)).padStart(5, '0');
-    const digitW = (3 + 1) * DS;
-    let startX = GAME_W - 15 - s.length * digitW;
+    var DS = 2;
+    var s = String(Math.floor(score)).padStart(5, '0');
+    var digitW = (3 + 1) * DS;
+    var startX = GAME_W - 15 - s.length * digitW;
 
-    // High score - just the number, no "HI"
     if (highScore > 0) {
-      const hs = String(Math.floor(highScore)).padStart(5, '0');
-      const hiX = startX - 12 - hs.length * digitW;
-      for (let i = 0; i < hs.length; i++) {
+      var hs = String(Math.floor(highScore)).padStart(5, '0');
+      var hiX = startX - 12 - hs.length * digitW;
+      for (var i = 0; i < hs.length; i++) {
         drawPixels(DIGITS[hs[i]], hiX + i * digitW, 8, '#9b9590', DS);
       }
     }
 
-    for (let i = 0; i < s.length; i++) {
+    for (var i = 0; i < s.length; i++) {
       drawPixels(DIGITS[s[i]], startX + i * digitW, 8, FG, DS);
     }
   }
 
-  const OBSTACLE_TYPES = [
+  var OBSTACLE_TYPES = [
     { sprite: TOMBSTONE_SMALL, name: 'small' },
     { sprite: CROSS, name: 'cross' },
-    { sprite: TOMBSTONE_DOUBLE, name: 'double' },
+    { sprite: TOMBSTONE_DOUBLE, name: 'double' }
   ];
 
   function spawnObstacle() {
-    let type;
-    const r = Math.random();
+    var type;
+    var r = Math.random();
     if (score < 50) {
       type = r > 0.3 ? OBSTACLE_TYPES[0] : OBSTACLE_TYPES[1];
     } else {
@@ -247,16 +232,10 @@
       else if (r < 0.7) type = OBSTACLE_TYPES[1];
       else type = OBSTACLE_TYPES[2];
     }
-    const sprite = type.sprite;
-    const h = sprite.length * S;
-    const w = sprite[0].length * S;
-    obstacles.push({
-      x: GAME_W + 10,
-      y: GROUND_Y - h + FEET_BELOW,
-      w: w,
-      h: h,
-      sprite: sprite
-    });
+    var sprite = type.sprite;
+    var h = sprite.length * S;
+    var w = sprite[0].length * S;
+    obstacles.push({ x: GAME_W + 10, y: GROUND_Y - h + FEET_BELOW, w: w, h: h, sprite: sprite });
   }
 
   function getFloorY(spriteRows) {
@@ -288,7 +267,19 @@
     }
   }
 
+  function updateStartingAnimation() {
+    skeleton.frameTimer++;
+    if (skeleton.frameTimer > 6) {
+      skeleton.frame = 1 - skeleton.frame;
+      skeleton.frameTimer = 0;
+    }
+  }
+
   function update() {
+    if (gameStarting) {
+      updateStartingAnimation();
+      return;
+    }
     if (!gameRunning || gameOver) return;
 
     frameCount++;
@@ -299,7 +290,7 @@
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
 
-    const floorY = getFloorY(SKEL_RUN1.length);
+    var floorY = getFloorY(SKEL_RUN1.length);
     if (skeleton.y >= floorY) {
       skeleton.y = floorY;
       skeleton.vy = 0;
@@ -315,34 +306,33 @@
     groundOffset += speed;
 
     obstacleTimer++;
-    const minGap = Math.max(30, 55 - score * 0.1);
-    const maxGap = Math.max(60, 100 - score * 0.1);
+    var minGap = Math.max(30, 55 - score * 0.1);
+    var maxGap = Math.max(60, 100 - score * 0.1);
     if (obstacleTimer >= nextObstacleIn) {
       spawnObstacle();
       obstacleTimer = 0;
       nextObstacleIn = minGap + Math.random() * (maxGap - minGap);
     }
 
-    for (let i = obstacles.length - 1; i >= 0; i--) {
+    for (var i = obstacles.length - 1; i >= 0; i--) {
       obstacles[i].x -= speed;
       if (obstacles[i].x + obstacles[i].w < -10) {
         obstacles.splice(i, 1);
       }
     }
 
-    // Collision
-    const spriteH = SKEL_RUN1.length * S;
-    const skW = 10 * S;
-    const skX = skeleton.x + 1 * S;
-    const skY = skeleton.y + 1 * S;
-    const skH = spriteH - 4 * S;
+    var spriteH = SKEL_RUN1.length * S;
+    var skW = 10 * S;
+    var skX = skeleton.x + 1 * S;
+    var skY = skeleton.y + 1 * S;
+    var skH = spriteH - 4 * S;
 
-    for (let obs of obstacles) {
-      const oX = obs.x + 2;
-      const oY = obs.y + 2;
-      const oW = obs.w - 4;
-      const oH = obs.h - 2;
-
+    for (var j = 0; j < obstacles.length; j++) {
+      var obs = obstacles[j];
+      var oX = obs.x + 2;
+      var oY = obs.y + 2;
+      var oW = obs.w - 4;
+      var oH = obs.h - 2;
       if (skX < oX + oW && skX + skW > oX && skY < oY + oH && skY + skH > oY) {
         gameOver = true;
         if (score > highScore) highScore = score;
@@ -354,32 +344,23 @@
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, GAME_W, GAME_H);
 
-    // Ground line with gap for skeleton
     ctx.fillStyle = FG;
-    const skelLeft = skeleton.x - 1;
-    const skelRight = skeleton.x + 12 * S + 1;
+    var skelLeft = skeleton.x - 1;
+    var skelRight = skeleton.x + 12 * S + 1;
 
     if (!gameRunning && !gameOver && !gameStarting) {
-      // Before start: short ground with gap for skeleton
-      const skelCenter = skeleton.x + 6 * S;
-      const lineW = 14 * S + 40;
-      const lineStart = skelCenter - lineW / 2;
-      // Left segment
+      var skelCenter = skeleton.x + 6 * S;
+      var lineW = 14 * S + 40;
+      var lineStart = skelCenter - lineW / 2;
       ctx.fillRect(lineStart, GROUND_Y, skelLeft - lineStart, 1);
-      // Right segment
       ctx.fillRect(skelRight, GROUND_Y, lineStart + lineW - skelRight, 1);
     } else if (gameStarting) {
-      // Opening animation: ground extends with gap
-      const skelCenter = skeleton.x + 6 * S;
-      const halfExtend = groundExtend / 2;
-      const startX = Math.max(0, skelCenter - halfExtend);
-      const endX = Math.min(GAME_W, skelCenter + halfExtend);
-      // Left segment (before skeleton)
-      ctx.fillRect(startX, GROUND_Y, skelLeft - startX, 1);
-      // Right segment (after skeleton)
-      ctx.fillRect(skelRight, GROUND_Y, endX - skelRight, 1);
+      var skelCenter2 = skeleton.x + 6 * S;
+      var lineW2 = 14 * S + 40;
+      var lineStart2 = skelCenter2 - lineW2 / 2;
+      ctx.fillRect(lineStart2, GROUND_Y, skelLeft - lineStart2, 1);
+      ctx.fillRect(skelRight, GROUND_Y, groundExtend - skelRight, 1);
     } else {
-      // Full ground line with gap for skeleton (when on ground)
       if (!skeleton.jumping) {
         ctx.fillRect(0, GROUND_Y, skelLeft, 1);
         ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
@@ -388,26 +369,20 @@
       }
     }
 
-    // Ground bumps (always show)
-    for (let b of GROUND_BUMPS) {
-      const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
-      const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
+    for (var i = 0; i < GROUND_BUMPS.length; i++) {
+      var b = GROUND_BUMPS[i];
+      var bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
+      var drawX = bx < -10 ? bx + GAME_W + 100 : bx;
       if (drawX >= 0 && drawX < GAME_W) {
-        // During opening, only show bumps within the extended ground
         if (!gameRunning && !gameOver && !gameStarting) {
-          const skelCenter = skeleton.x + 6 * S;
-          const lineW = 14 * S + 40;
-          const lineStart = skelCenter - lineW / 2;
-          const lineEnd = lineStart + lineW;
-          if (drawX >= lineStart && drawX <= lineEnd) {
+          var sc = skeleton.x + 6 * S;
+          var lw = 14 * S + 40;
+          var ls = sc - lw / 2;
+          if (drawX >= ls && drawX <= ls + lw) {
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else if (gameStarting) {
-          const skelCenter = skeleton.x + 6 * S;
-          const halfExtend = groundExtend / 2;
-          const startX = Math.max(0, skelCenter - halfExtend);
-          const endX = Math.min(GAME_W, skelCenter + halfExtend);
-          if (drawX >= startX && drawX <= endX) {
+          if (drawX <= groundExtend) {
             ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
           }
         } else {
@@ -416,8 +391,7 @@
       }
     }
 
-    // Skeleton
-    let sprite;
+    var sprite;
     if (!gameRunning && !gameOver && !gameStarting) {
       sprite = SKEL_IDLE;
     } else if (skeleton.jumping) {
@@ -427,17 +401,14 @@
     }
     drawPixels(sprite, skeleton.x, skeleton.y);
 
-    // Obstacles
-    for (let obs of obstacles) {
-      drawPixels(obs.sprite, obs.x, obs.y);
+    for (var k = 0; k < obstacles.length; k++) {
+      drawPixels(obstacles[k].sprite, obstacles[k].x, obstacles[k].y);
     }
 
-    // Score (only when game is active)
     if (gameRunning || gameOver) {
       drawScore();
     }
 
-    // Game over
     if (gameOver) {
       ctx.fillStyle = FG;
       ctx.font = 'bold 18px monospace';
@@ -445,7 +416,6 @@
       ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 5);
     }
 
-    // Start prompt (idle state)
     if (!gameRunning && !gameOver && !gameStarting) {
       ctx.fillStyle = FG;
       ctx.font = '12px monospace';
@@ -463,11 +433,14 @@
   function startOpening() {
     if (gameStarting || gameRunning) return;
     gameStarting = true;
-    groundExtend = 0;
-    const openSpeed = 25;
+    skeleton.y = getFloorY(SKEL_RUN1.length);
+    var skelCenter = skeleton.x + 6 * S;
+    var lineW = 14 * S + 40;
+    groundExtend = skelCenter + lineW / 2;
+    var openSpeed = 20;
     function animateOpen() {
       groundExtend += openSpeed;
-      if (groundExtend >= GAME_W * 1.5) {
+      if (groundExtend >= GAME_W) {
         gameStarting = false;
         reset();
       } else {
@@ -477,8 +450,7 @@
     animateOpen();
   }
 
-  // Controls
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', function(e) {
     if (e.code === 'Space' && document.activeElement !== document.getElementById('birthInput')) {
       e.preventDefault();
       if (!gameRunning && !gameOver && !gameStarting) startOpening();
@@ -493,20 +465,20 @@
     }
   });
 
-  canvas.addEventListener('click', () => {
+  canvas.addEventListener('click', function() {
     if (!gameRunning && !gameOver && !gameStarting) startOpening();
     else if (gameRunning) jump();
     else if (gameOver) reset();
   });
 
-  canvas.addEventListener('touchstart', (e) => {
+  canvas.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (!gameRunning && !gameOver && !gameStarting) startOpening();
     else if (gameRunning) jump();
     else if (gameOver) reset();
   }, { passive: false });
 
-  let loopStarted = false;
+  var loopStarted = false;
 
   function initGame() {
     skeleton.y = getFloorY(SKEL_IDLE.length);
@@ -517,9 +489,9 @@
     }
   }
 
-  const page2 = document.getElementById('page2');
+  var page2 = document.getElementById('page2');
   if (page2) {
-    const observer = new MutationObserver(() => {
+    var observer = new MutationObserver(function() {
       if (!page2.classList.contains('hidden')) {
         setTimeout(initGame, 50);
       }
