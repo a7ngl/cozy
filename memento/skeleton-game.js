@@ -13,17 +13,19 @@
   const isMobile = window.innerWidth <= 768;
   const S = isMobile ? 3 : 2;
 
-  // Ground line - skeleton feet cross below this
+  // Ground line - skeleton feet cross below this, line has gap for skeleton
   const GROUND_Y = 118;
   const FEET_BELOW = 3 * S;
 
   // Game state
   let gameRunning = false;
   let gameOver = false;
+  let gameStarting = false; // for ground opening animation
   let score = 0;
   let highScore = 0;
   let speed = 6;
   let frameCount = 0;
+  let groundExtend = 0; // 0 to GAME_W for opening animation
 
   const skeleton = {
     x: isMobile ? 30 : 40,
@@ -352,11 +354,41 @@
     ctx.fillStyle = BG_COLOR;
     ctx.fillRect(0, 0, GAME_W, GAME_H);
 
-    // Ground line
+    // Ground line with gap for skeleton
     ctx.fillStyle = FG;
-    ctx.fillRect(0, GROUND_Y, GAME_W, 1);
+    const skelLeft = skeleton.x - 1;
+    const skelRight = skeleton.x + 12 * S + 1;
 
-    // Ground bumps
+    if (!gameRunning && !gameOver && !gameStarting) {
+      // Before start: short ground with gap for skeleton
+      const skelCenter = skeleton.x + 6 * S;
+      const lineW = 14 * S + 40;
+      const lineStart = skelCenter - lineW / 2;
+      // Left segment
+      ctx.fillRect(lineStart, GROUND_Y, skelLeft - lineStart, 1);
+      // Right segment
+      ctx.fillRect(skelRight, GROUND_Y, lineStart + lineW - skelRight, 1);
+    } else if (gameStarting) {
+      // Opening animation: ground extends with gap
+      const skelCenter = skeleton.x + 6 * S;
+      const halfExtend = groundExtend / 2;
+      const startX = Math.max(0, skelCenter - halfExtend);
+      const endX = Math.min(GAME_W, skelCenter + halfExtend);
+      // Left segment (before skeleton)
+      ctx.fillRect(startX, GROUND_Y, skelLeft - startX, 1);
+      // Right segment (after skeleton)
+      ctx.fillRect(skelRight, GROUND_Y, endX - skelRight, 1);
+    } else {
+      // Full ground line with gap for skeleton (when on ground)
+      if (!skeleton.jumping) {
+        ctx.fillRect(0, GROUND_Y, skelLeft, 1);
+        ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
+      } else {
+        ctx.fillRect(0, GROUND_Y, GAME_W, 1);
+      }
+    }
+
+    // Ground bumps (only when ground is full)
     if (gameRunning || gameOver) {
       for (let b of GROUND_BUMPS) {
         const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
@@ -369,8 +401,7 @@
 
     // Skeleton
     let sprite;
-    if (!gameRunning && !gameOver) {
-      // Idle pose before game starts (like chrome dino standing)
+    if (!gameRunning && !gameOver && !gameStarting) {
       sprite = SKEL_IDLE;
     } else if (skeleton.jumping) {
       sprite = SKEL_JUMP;
@@ -404,29 +435,50 @@
     requestAnimationFrame(loop);
   }
 
+  function startOpening() {
+    if (gameStarting || gameRunning) return;
+    gameStarting = true;
+    groundExtend = 0;
+    const openSpeed = 25;
+    function animateOpen() {
+      groundExtend += openSpeed;
+      if (groundExtend >= GAME_W * 1.5) {
+        gameStarting = false;
+        reset();
+      } else {
+        requestAnimationFrame(animateOpen);
+      }
+    }
+    animateOpen();
+  }
+
   // Controls
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && document.activeElement !== document.getElementById('birthInput')) {
       e.preventDefault();
-      if (!gameRunning && !gameOver) reset();
-      else jump();
+      if (!gameRunning && !gameOver && !gameStarting) startOpening();
+      else if (gameRunning) jump();
+      else if (gameOver) reset();
     }
     if (e.code === 'ArrowUp' && document.activeElement !== document.getElementById('birthInput')) {
       e.preventDefault();
-      if (!gameRunning && !gameOver) reset();
-      else jump();
+      if (!gameRunning && !gameOver && !gameStarting) startOpening();
+      else if (gameRunning) jump();
+      else if (gameOver) reset();
     }
   });
 
   canvas.addEventListener('click', () => {
-    if (!gameRunning && !gameOver) reset();
-    else jump();
+    if (!gameRunning && !gameOver && !gameStarting) startOpening();
+    else if (gameRunning) jump();
+    else if (gameOver) reset();
   });
 
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (!gameRunning && !gameOver) reset();
-    else jump();
+    if (!gameRunning && !gameOver && !gameStarting) startOpening();
+    else if (gameRunning) jump();
+    else if (gameOver) reset();
   }, { passive: false });
 
   let loopStarted = false;
