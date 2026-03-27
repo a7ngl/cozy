@@ -3,144 +3,147 @@
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  const FG = '#1a1a1a';
-  const BG = '#F5F0E8';
-  let SCALE = 2;
+  // Fixed internal resolution (same as Chrome dino)
+  const GAME_W = 600;
+  const GAME_H = 150;
+  canvas.width = GAME_W;
+  canvas.height = GAME_H;
 
-  let W, H;
+  const FG = '#1a1a1a';
+  const BG_COLOR = '#F5F0E8';
+  const isMobile = window.innerWidth <= 768;
+  const S = isMobile ? 1 : 2; // 2x on desktop, 1x on mobile
+
+  // Ground
+  const GROUND_Y = 130;
+
+  // Game state
   let gameRunning = false;
   let gameOver = false;
   let score = 0;
   let highScore = 0;
-  let speed = 4;
+  let speed = 6;
   let frameCount = 0;
 
-  // Ground
-  const GROUND_Y_OFFSET = 30;
-  let groundY;
-
-  // Skeleton player
+  // Skeleton player (similar proportions to chrome dino t-rex)
   const skeleton = {
-    x: 40,
-    y: 0,
-    w: 10,
-    h: 14,
+    x: 25,
+    y: GROUND_Y,
+    w: 20,
+    h: 22,
     vy: 0,
     jumping: false,
     frame: 0,
     frameTimer: 0
   };
 
-  let GRAVITY = 0.6;
-  let JUMP_FORCE = -10;
+  const GRAVITY = 0.6;
+  const JUMP_FORCE = -10;
 
   // Obstacles
   let obstacles = [];
   let obstacleTimer = 0;
-  const MIN_GAP = 60;
-  const MAX_GAP = 120;
-  let nextObstacleIn = 80;
+  let nextObstacleIn = 50;
 
-  // Ground texture dots
-  let groundDots = [];
+  // Ground texture
+  let groundSegments = [];
 
-  function resize() {
-    const rect = canvas.getBoundingClientRect();
-    W = Math.floor(rect.width);
-    H = Math.floor(rect.height);
-    canvas.width = W;
-    canvas.height = H;
-    // Scale: dynamic on mobile, fixed on desktop
-    const isMobile = window.innerWidth <= 768;
-    if (isMobile) {
-      SCALE = Math.max(2, Math.floor(H / 60));
-      GRAVITY = 0.3 * SCALE;
-      JUMP_FORCE = -5 * SCALE;
-    } else {
-      SCALE = 2;
-      GRAVITY = 0.6;
-      JUMP_FORCE = -10;
-    }
-    groundY = H - (isMobile ? SCALE * 10 : 30);
-    skeleton.y = groundY - skeleton.h * SCALE;
-    ctx.imageSmoothingEnabled = false;
-  }
-
-  // 8-bit skeleton sprites (pixel arrays where 1 = filled)
-  // Each sprite is defined as [row][col], drawn at SCALE px per pixel
-  const SKELETON_RUN1 = [
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,1,0,1,1,0,1,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,1,0,0,1,1,0,0,1,0],
-    [1,0,0,0,1,1,0,0,0,1],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,1,0,0,0,0,1,0,0],
-    [0,0,1,0,0,0,0,0,1,0],
-    [0,1,1,0,0,0,0,0,0,0],
+  // Skeleton sprites (pixel art, each cell = 1px at game resolution)
+  // ~20x22 sprite to match t-rex proportions
+  const SKEL_RUN1 = [
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,0,0,1,1,1,1,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0],
   ];
 
-  const SKELETON_RUN2 = [
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,1,0,1,1,0,1,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,1,0,0,1,1,0,0,1,0],
-    [1,0,0,0,1,1,0,0,0,1],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,0,0,1,0,1,0,0,0],
-    [0,0,0,1,0,0,0,1,0,0],
-    [0,0,0,0,0,0,0,1,1,0],
+  const SKEL_RUN2 = [
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,0,0,1,1,1,1,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0],
   ];
 
-  const SKELETON_JUMP = [
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,1,0,1,1,0,1,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,1,0,0,1,1,0,0,1,0],
-    [1,0,0,0,1,1,0,0,0,1],
-    [0,0,0,0,1,1,0,0,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,1,0,0,0,0,1,0,0],
-    [0,1,0,0,0,0,0,0,1,0],
-    [1,0,0,0,0,0,0,0,0,1],
+  const SKEL_JUMP = [
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,1,1,1,1,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,0,0,1,1,1,1,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,1,1,1,1,0,0,0,1,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0],
+    [0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
+    [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
   ];
 
-  // Tombstone obstacle sprite
-  const TOMBSTONE = [
-    [0,0,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1],
-    [1,1,0,0,0,0,1,1],
-    [1,1,0,1,1,0,1,1],
-    [1,1,0,0,1,0,1,1],
-    [1,1,0,1,0,0,1,1],
-    [1,1,0,0,0,0,1,1],
-    [1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1],
+  // Tombstone ~12x18
+  const TOMBSTONE_SMALL = [
+    [0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,0,0,0,0,0,0,1,1,1],
+    [1,1,1,0,1,1,1,1,0,1,1,1],
+    [1,1,1,0,0,0,1,0,0,1,1,1],
+    [1,1,1,0,1,0,0,0,0,1,1,1],
+    [1,1,1,0,0,0,0,0,0,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1],
   ];
 
-  // Cross obstacle sprite
+  // Cross ~8x24
   const CROSS = [
     [0,0,0,1,1,0,0,0],
     [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
     [1,1,1,1,1,1,1,1],
     [1,1,1,1,1,1,1,1],
+    [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
+    [0,0,0,1,1,0,0,0],
     [0,0,0,1,1,0,0,0],
     [0,0,0,1,1,0,0,0],
     [0,0,0,1,1,0,0,0],
@@ -153,7 +156,29 @@
     [0,0,1,1,1,1,0,0],
   ];
 
-  // Pixel font digits (5x5 each)
+  // Double tombstone ~24x18
+  const TOMBSTONE_DOUBLE = [
+    [0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ];
+
+  // Score font (3x5 digits)
   const DIGITS = {
     '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
     '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
@@ -167,16 +192,24 @@
     '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
   };
 
-  function drawSprite(sprite, x, y, scale) {
-    ctx.fillStyle = FG;
+  // Ground scroll
+  let groundOffset = 0;
+  const GROUND_BUMPS = [];
+  for (let i = 0; i < 200; i++) {
+    GROUND_BUMPS.push({
+      x: i * 5 + Math.random() * 3,
+      h: Math.random() > 0.7 ? 2 : 1,
+      w: Math.random() > 0.5 ? 2 : 1
+    });
+  }
+
+  function drawPixels(sprite, x, y, color, scale) {
+    const ps = scale || S;
+    ctx.fillStyle = color || FG;
     for (let r = 0; r < sprite.length; r++) {
       for (let c = 0; c < sprite[r].length; c++) {
         if (sprite[r][c]) {
-          ctx.fillRect(
-            Math.floor(x + c * scale),
-            Math.floor(y + r * scale),
-            scale, scale
-          );
+          ctx.fillRect(Math.floor(x + c * ps), Math.floor(y + r * ps), ps, ps);
         }
       }
     }
@@ -184,79 +217,73 @@
 
   function drawScore() {
     const s = String(Math.floor(score)).padStart(5, '0');
-    const digitW = 4 * SCALE;
-    const gap = 2 * SCALE;
-    const totalW = s.length * (digitW + gap);
-    let startX = W - totalW - 10;
+    const digitW = 4;
+    const gap = 1;
+    let startX = GAME_W - 10 - s.length * (digitW + gap);
 
     // High score
     if (highScore > 0) {
-      const hs = 'HI ' + String(Math.floor(highScore)).padStart(5, '0');
+      const hs = String(Math.floor(highScore)).padStart(5, '0');
+      const hiX = startX - 8 - hs.length * (digitW + gap) - 12;
+      // "HI"
       ctx.fillStyle = '#9b9590';
+      ctx.fillRect(hiX, 8, 1, 5);
+      ctx.fillRect(hiX+2, 8, 1, 5);
+      ctx.fillRect(hiX, 10, 3, 1);
+      ctx.fillRect(hiX+4, 8, 1, 5);
       for (let i = 0; i < hs.length; i++) {
-        const ch = hs[i];
-        if (DIGITS[ch]) {
-          drawSpriteColor(DIGITS[ch], startX - (hs.length - i) * (digitW + gap), 10, SCALE, '#9b9590');
-        }
+        drawPixels(DIGITS[hs[i]], hiX + 7 + i * (digitW + gap), 8, '#9b9590', 1);
       }
     }
 
     for (let i = 0; i < s.length; i++) {
-      drawSprite(DIGITS[s[i]], startX + i * (digitW + gap), 10, SCALE);
+      drawPixels(DIGITS[s[i]], startX + i * (digitW + gap), 8, FG, 1);
     }
   }
 
-  function drawSpriteColor(sprite, x, y, scale, color) {
-    ctx.fillStyle = color;
-    for (let r = 0; r < sprite.length; r++) {
-      for (let c = 0; c < sprite[r].length; c++) {
-        if (sprite[r][c]) {
-          ctx.fillRect(
-            Math.floor(x + c * scale),
-            Math.floor(y + r * scale),
-            scale, scale
-          );
-        }
-      }
-    }
-  }
+  const OBSTACLE_TYPES = [
+    { sprite: TOMBSTONE_SMALL, name: 'small' },
+    { sprite: CROSS, name: 'cross' },
+    { sprite: TOMBSTONE_DOUBLE, name: 'double' },
+  ];
 
   function spawnObstacle() {
-    const type = Math.random() > 0.5 ? TOMBSTONE : CROSS;
-    const spriteH = type.length * SCALE;
-    const spriteW = type[0].length * SCALE;
+    // Weighted random: more small tombstones early, more variety later
+    let type;
+    const r = Math.random();
+    if (score < 50) {
+      type = r > 0.3 ? OBSTACLE_TYPES[0] : OBSTACLE_TYPES[1];
+    } else {
+      if (r < 0.4) type = OBSTACLE_TYPES[0];
+      else if (r < 0.7) type = OBSTACLE_TYPES[1];
+      else type = OBSTACLE_TYPES[2];
+    }
+    const sprite = type.sprite;
+    const h = sprite.length * S;
+    const w = sprite[0].length * S;
     obstacles.push({
-      x: W + 10,
-      y: groundY - spriteH,
-      w: spriteW,
-      h: spriteH,
-      sprite: type
+      x: GAME_W + 10,
+      y: GROUND_Y - h,
+      w: w,
+      h: h,
+      sprite: sprite
     });
   }
 
-  function initGroundDots() {
-    groundDots = [];
-    for (let i = 0; i < 40; i++) {
-      groundDots.push({
-        x: Math.random() * W,
-        y: groundY + 4 + Math.random() * 12
-      });
-    }
-  }
-
   function reset() {
-    skeleton.y = groundY - skeleton.h * SCALE;
+    const spriteH = SKEL_RUN1.length * S;
+    skeleton.y = GROUND_Y - spriteH;
     skeleton.vy = 0;
     skeleton.jumping = false;
     skeleton.frame = 0;
     obstacles = [];
     obstacleTimer = 0;
-    nextObstacleIn = 80;
+    nextObstacleIn = 60;
     score = 0;
-    speed = 4;
+    speed = 6;
     gameOver = false;
     gameRunning = true;
-    initGroundDots();
+    groundOffset = 0;
   }
 
   function jump() {
@@ -273,14 +300,16 @@
     if (!gameRunning || gameOver) return;
 
     frameCount++;
-    score += speed * 0.02;
-    speed = 4 + score * 0.005;
+    score += speed * 0.015;
+    speed = 6 + score * 0.008;
+    if (speed > 16) speed = 16;
 
     // Skeleton physics
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
 
-    const floorY = groundY - skeleton.h * SCALE;
+    const spriteH = SKEL_RUN1.length * S;
+    const floorY = GROUND_Y - spriteH;
     if (skeleton.y >= floorY) {
       skeleton.y = floorY;
       skeleton.vy = 0;
@@ -289,50 +318,44 @@
 
     // Animation frame
     skeleton.frameTimer++;
-    if (skeleton.frameTimer > 8) {
+    if (skeleton.frameTimer > 6) {
       skeleton.frame = 1 - skeleton.frame;
       skeleton.frameTimer = 0;
     }
 
+    // Ground scroll
+    groundOffset += speed;
+
     // Obstacles
     obstacleTimer++;
+    const minGap = Math.max(30, 55 - score * 0.1);
+    const maxGap = Math.max(60, 100 - score * 0.1);
     if (obstacleTimer >= nextObstacleIn) {
       spawnObstacle();
       obstacleTimer = 0;
-      nextObstacleIn = MIN_GAP + Math.random() * (MAX_GAP - MIN_GAP);
+      nextObstacleIn = minGap + Math.random() * (maxGap - minGap);
     }
 
     for (let i = obstacles.length - 1; i >= 0; i--) {
       obstacles[i].x -= speed;
-      if (obstacles[i].x + obstacles[i].w < 0) {
+      if (obstacles[i].x + obstacles[i].w < -10) {
         obstacles.splice(i, 1);
       }
     }
 
-    // Ground dots
-    for (let d of groundDots) {
-      d.x -= speed * 0.5;
-      if (d.x < 0) d.x = W + Math.random() * 20;
-    }
-
-    // Collision
-    const skX = skeleton.x;
-    const skY = skeleton.y;
-    const skW = skeleton.w * SCALE * 0.6;
-    const skH = skeleton.h * SCALE * 0.8;
-    const skLeft = skX + (skeleton.w * SCALE - skW) / 2;
-    const skTop = skY + (skeleton.h * SCALE - skH);
+    // Collision (with slight hitbox reduction for fairness)
+    const skX = skeleton.x + 8;
+    const skY = skeleton.y + 6;
+    const skW = 24;
+    const skH = spriteH - 10;
 
     for (let obs of obstacles) {
-      const oLeft = obs.x + 2;
-      const oTop = obs.y + 2;
+      const oX = obs.x + 2;
+      const oY = obs.y + 2;
       const oW = obs.w - 4;
-      const oH = obs.h - 4;
+      const oH = obs.h - 2;
 
-      if (skLeft < oLeft + oW &&
-          skLeft + skW > oLeft &&
-          skTop < oTop + oH &&
-          skTop + skH > oTop) {
+      if (skX < oX + oW && skX + skW > oX && skY < oY + oH && skY + skH > oY) {
         gameOver = true;
         if (score > highScore) highScore = score;
       }
@@ -340,48 +363,54 @@
   }
 
   function draw() {
-    ctx.clearRect(0, 0, W, H);
+    // Clear with background color
+    ctx.fillStyle = BG_COLOR;
+    ctx.fillRect(0, 0, GAME_W, GAME_H);
 
     // Ground line
     ctx.fillStyle = FG;
-    ctx.fillRect(0, groundY, W, 1);
+    ctx.fillRect(0, GROUND_Y, GAME_W, 1);
 
-    // Ground dots
-    for (let d of groundDots) {
-      ctx.fillRect(Math.floor(d.x), Math.floor(d.y), SCALE, SCALE);
+    // Ground bumps (scrolling)
+    for (let b of GROUND_BUMPS) {
+      const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
+      const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
+      if (drawX >= 0 && drawX < GAME_W) {
+        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + Math.floor(Math.random() * 8), b.w, b.h);
+      }
     }
 
     // Skeleton
     let sprite;
     if (skeleton.jumping) {
-      sprite = SKELETON_JUMP;
+      sprite = SKEL_JUMP;
     } else {
-      sprite = skeleton.frame === 0 ? SKELETON_RUN1 : SKELETON_RUN2;
+      sprite = skeleton.frame === 0 ? SKEL_RUN1 : SKEL_RUN2;
     }
-    drawSprite(sprite, skeleton.x, skeleton.y, SCALE);
+    drawPixels(sprite, skeleton.x, skeleton.y);
 
     // Obstacles
     for (let obs of obstacles) {
-      drawSprite(obs.sprite, obs.x, obs.y, SCALE);
+      drawPixels(obs.sprite, obs.x, obs.y);
     }
 
     // Score
     drawScore();
 
-    // Game over text
+    // Game over
     if (gameOver) {
       ctx.fillStyle = FG;
-      ctx.font = '12px monospace';
+      ctx.font = '10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('GAME OVER', W / 2, H / 2);
+      ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 5);
     }
 
     // Start prompt
     if (!gameRunning && !gameOver) {
       ctx.fillStyle = FG;
-      ctx.font = '10px monospace';
+      ctx.font = '8px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('start', W / 2, H / 2);
+      ctx.fillText('start', GAME_W / 2, GAME_H / 2);
     }
   }
 
@@ -395,51 +424,37 @@
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && document.activeElement !== document.getElementById('birthInput')) {
       e.preventDefault();
-      if (!gameRunning && !gameOver) {
-        reset();
-      } else {
-        jump();
-      }
+      if (!gameRunning && !gameOver) reset();
+      else jump();
     }
     if (e.code === 'ArrowUp' && document.activeElement !== document.getElementById('birthInput')) {
       e.preventDefault();
-      if (!gameRunning && !gameOver) {
-        reset();
-      } else {
-        jump();
-      }
+      if (!gameRunning && !gameOver) reset();
+      else jump();
     }
   });
 
   canvas.addEventListener('click', () => {
-    if (!gameRunning && !gameOver) {
-      reset();
-    } else {
-      jump();
-    }
+    if (!gameRunning && !gameOver) reset();
+    else jump();
   });
 
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (!gameRunning && !gameOver) {
-      reset();
-    } else {
-      jump();
-    }
+    if (!gameRunning && !gameOver) reset();
+    else jump();
   }, { passive: false });
 
-  // Init - wait for page2 to become visible before sizing
+  // Init
   let loopStarted = false;
 
   function initGame() {
-    resize();
-    if (W > 0 && H > 0) {
-      initGroundDots();
-      draw();
-      if (!loopStarted) {
-        loopStarted = true;
-        loop();
-      }
+    const spriteH = SKEL_RUN1.length * S;
+    skeleton.y = GROUND_Y - spriteH;
+    draw();
+    if (!loopStarted) {
+      loopStarted = true;
+      loop();
     }
   }
 
@@ -454,11 +469,8 @@
     observer.observe(page2, { attributes: true, attributeFilter: ['class'] });
   }
 
-  // Also try init now in case page2 is already visible
   initGame();
-  window.addEventListener('resize', resize);
 
-  // Expose stop function for page transitions
   window.stopSkeletonGame = function() {
     gameRunning = false;
     gameOver = false;

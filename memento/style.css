@@ -55,28 +55,16 @@ body {
 /* Game canvas */
 .game-container {
   width: 90vw;
-  max-width: 1400px;
+  max-width: 900px;
   margin: 0 auto 40px;
 }
 
 #gameCanvas {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 1;
+  height: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-}
-
-@media (max-width: 768px) {
-  #gameCanvas {
-    aspect-ratio: 2 / 1;
-  }
-}
-
-@media (min-width: 769px) {
-  #gameCanvas {
-    aspect-ratio: 4 / 1;
-  }
 }
 
 /* No click hint - auto transition */
