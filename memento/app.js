@@ -14,8 +14,8 @@ setTimeout(() => {
   setTimeout(() => {
     page1.classList.add('hidden');
     document.getElementById('birthInput').focus();
-  }, 500);
-}, 4500);
+  }, 1000);
+}, 4200);
 
 // Page 2 -> Dashboard
 const birthInput = document.getElementById('birthInput');

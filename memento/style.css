@@ -21,6 +21,10 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
 }
 
 /* Page 1 - Title */
@@ -111,18 +115,18 @@ body {
 
 /* Page transition - slide up + fade out */
 .slide-up-out {
-  animation: slideUpOut 0.5s ease forwards !important;
+  animation: slideUpOut 1s ease forwards !important;
 }
 
 .slide-up-out * {
-  animation: slideUpOut 0.5s ease forwards !important;
+  animation: slideUpOut 1s ease forwards !important;
 }
 
 /* Page 2 slide up entrance */
 .slide-up-in {
   opacity: 0;
-  transform: translateY(30px);
-  animation: slideUpIn 0.5s ease forwards !important;
+  transform: translateY(60px);
+  animation: slideUpIn 1s ease forwards !important;
 }
 
 /* Regular fade out for page2 -> dashboard */
@@ -158,14 +162,14 @@ body {
 @keyframes slideUpOut {
   to {
     opacity: 0;
-    transform: translateY(-40px);
+    transform: translateY(-60px);
   }
 }
 
 @keyframes slideUpIn {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(60px);
   }
   to {
     opacity: 1;
