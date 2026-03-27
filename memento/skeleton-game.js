@@ -419,13 +419,6 @@
     if (!skeleton.jumping) {
       gaps.push({ l: skelLeft, r: skelRight });
     }
-    if (gameRunning || gameOver) {
-      for (var g = 0; g < obstacles.length; g++) {
-        if (!obstacles[g].flying) {
-          gaps.push({ l: obstacles[g].x - 1, r: obstacles[g].x + obstacles[g].w + 1 });
-        }
-      }
-    }
 
     if (!gameRunning && !gameOver && !gameStarting) {
       var skelCenter = skeleton.x + 6 * S;
