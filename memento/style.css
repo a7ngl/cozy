@@ -55,7 +55,6 @@ body {
   text-align: center;
   opacity: 0;
   transform: translateY(15px);
-  animation: fadeUp 0.8s ease 0.2s forwards;
 }
 
 .page2-label {

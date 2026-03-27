@@ -10,6 +10,7 @@ setTimeout(() => {
   setTimeout(() => {
     page1.classList.add('hidden');
     page2.classList.remove('hidden');
+    page2.querySelector('.page2-content').style.animation = 'fadeUp 0.8s ease 0.2s forwards';
     document.getElementById('birthInput').focus();
   }, 600);
 }, 3000);
