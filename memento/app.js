@@ -6,12 +6,15 @@ const page1 = document.getElementById('page1');
 const page2 = document.getElementById('page2');
 
 setTimeout(() => {
-  page1.classList.add('fade-out');
+  // Start sliding page1 up and fading out
+  page1.classList.add('slide-up-out');
+  // Simultaneously show page2 sliding up from below
+  page2.classList.remove('hidden');
+  page2.classList.add('slide-up-in');
   setTimeout(() => {
     page1.classList.add('hidden');
-    page2.classList.remove('hidden');
     document.getElementById('birthInput').focus();
-  }, 600);
+  }, 500);
 }, 4500);
 
 // Page 2 -> Dashboard
