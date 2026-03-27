@@ -115,18 +115,18 @@ body {
 
 /* Page transition - slide up + fade out */
 .slide-up-out {
-  animation: slideUpOut 0.5s ease forwards !important;
+  animation: slideUpOut 0.7s ease forwards !important;
 }
 
 .slide-up-out * {
-  animation: slideUpOut 0.5s ease forwards !important;
+  animation: slideUpOut 0.7s ease forwards !important;
 }
 
 /* Page 2 slide up entrance */
 .slide-up-in {
   opacity: 0;
   transform: translateY(60px);
-  animation: slideUpIn 0.5s ease forwards !important;
+  animation: slideUpIn 0.7s ease forwards !important;
 }
 
 /* Regular fade out for page2 -> dashboard */
@@ -181,7 +181,7 @@ body {
 .dashboard.slide-up-in {
   opacity: 0;
   transform: translateY(60px);
-  animation: slideUpIn 0.5s ease forwards !important;
+  animation: slideUpIn 0.7s ease forwards !important;
 }
 
 /* ========== DASHBOARD ========== */

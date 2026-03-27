@@ -14,7 +14,7 @@ setTimeout(() => {
   setTimeout(() => {
     page1.classList.add('hidden');
     document.getElementById('birthInput').focus();
-  }, 500);
+  }, 700);
 }, 4500);
 
 // Page 2 -> Dashboard
@@ -60,7 +60,7 @@ enterBtn.addEventListener('click', () => {
   initDashboard();
   setTimeout(() => {
     page2.classList.add('hidden');
-  }, 500);
+  }, 700);
 });
 
 function initDashboard() {
