@@ -222,12 +222,12 @@
 
   var groundOffset = 0;
   var GROUND_BUMPS = [];
-  for (var i = 0; i < 200; i++) {
+  for (var i = 0; i < 80; i++) {
     GROUND_BUMPS.push({
-      x: i * 5 + Math.random() * 3,
-      h: Math.random() > 0.7 ? 2 : 1,
+      x: i * 12 + Math.random() * 6,
+      h: 1,
       w: Math.random() > 0.5 ? 2 : 1,
-      yOff: Math.floor(Math.random() * 6)
+      yOff: Math.floor(Math.random() * 3)
     });
   }
 
