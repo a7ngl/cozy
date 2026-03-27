@@ -3,7 +3,6 @@
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  // Fixed internal resolution
   const GAME_W = 600;
   const GAME_H = 150;
   canvas.width = GAME_W;
@@ -12,12 +11,11 @@
   const FG = '#1a1a1a';
   const BG_COLOR = '#F5F0E8';
   const isMobile = window.innerWidth <= 768;
-  const S = isMobile ? 3 : 2; // 3x on mobile for bigger sprites, 2x on desktop
+  const S = isMobile ? 3 : 2;
 
-  // Ground line position - skeleton feet will cross below this
-  const GROUND_Y = 120;
-  // Skeleton stands so feet are BELOW ground line (like chrome dino)
-  const FEET_BELOW_GROUND = 4 * S; // feet pixels below ground
+  // Ground line - skeleton feet cross below this
+  const GROUND_Y = 118;
+  const FEET_BELOW = 3 * S;
 
   // Game state
   let gameRunning = false;
@@ -27,10 +25,9 @@
   let speed = 6;
   let frameCount = 0;
 
-  // Skeleton player
   const skeleton = {
     x: isMobile ? 30 : 40,
-    y: GROUND_Y,
+    y: 0,
     vy: 0,
     jumping: false,
     frame: 0,
@@ -40,74 +37,88 @@
   const GRAVITY = 0.6;
   const JUMP_FORCE = -10;
 
-  // Obstacles
   let obstacles = [];
   let obstacleTimer = 0;
   let nextObstacleIn = 50;
 
-  // Redesigned skeleton - thinner, more skeletal with visible bones
-  // 14 wide x 18 tall
+  // Skeleton based on reference - chunky pixel art style
+  // Side view, 12 wide x 16 tall
+  // Chunky skull, visible ribs, proper bone limbs
+
+  const SKEL_IDLE = [
+    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
+    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
+    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
+    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
+    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
+    [0,0,0,1,1,1,1,1,1,0,0,0], // shoulders
+    [0,0,1,0,1,1,1,1,0,1,0,0], // arms + ribs
+    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
+    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
+    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
+    [0,0,0,0,1,0,0,1,0,0,0,0], // upper legs
+    [0,0,0,0,1,0,0,1,0,0,0,0], // legs
+    [0,0,0,1,1,0,0,1,1,0,0,0], // feet
+  ];
+
   const SKEL_RUN1 = [
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // skull top
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull
-    [0,0,0,1,0,1,1,1,0,1,1,0,0,0], // eyes
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull bottom
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // jaw teeth
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // neck
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,0,1,0,1,1,1,1,1,1,0,1,0,0], // ribs + arms out
-    [0,1,0,0,0,1,1,1,1,0,0,0,1,0], // ribs + arms
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // lower ribs
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // pelvis
-    [0,0,0,0,0,1,0,0,1,0,0,0,0,0], // hip joints
-    [0,0,0,0,1,0,0,0,0,1,0,0,0,0], // upper legs
-    [0,0,0,1,0,0,0,0,0,0,1,0,0,0], // legs
-    [0,0,1,0,0,0,0,0,0,0,0,1,0,0], // lower legs - right forward
-    [0,0,0,0,0,0,0,0,0,0,0,0,1,0], // right foot forward
-    [0,1,1,0,0,0,0,0,0,0,0,0,1,0], // left foot back + right foot
+    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
+    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
+    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
+    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
+    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
+    [0,1,0,1,1,1,1,1,1,0,0,0], // arm back + shoulders
+    [1,0,0,0,1,1,1,1,0,1,0,0], // arm + ribs
+    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
+    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
+    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
+    [0,0,0,0,1,0,0,0,1,0,0,0], // legs split
+    [0,0,0,1,0,0,0,0,0,1,0,0], // legs wide
+    [0,0,1,1,0,0,0,0,0,0,1,0], // lower legs
+    [0,1,1,0,0,0,0,0,0,0,1,1], // feet
   ];
 
   const SKEL_RUN2 = [
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // skull top
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull
-    [0,0,0,1,0,1,1,1,0,1,1,0,0,0], // eyes
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull bottom
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // jaw teeth
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // neck
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,0,1,0,1,1,1,1,1,1,0,1,0,0], // ribs + arms out
-    [0,1,0,0,0,1,1,1,1,0,0,0,1,0], // ribs + arms
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // lower ribs
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // pelvis
-    [0,0,0,0,0,1,0,0,1,0,0,0,0,0], // hip joints
-    [0,0,0,0,0,0,1,1,0,0,0,0,0,0], // upper legs together
-    [0,0,0,0,0,1,0,0,1,0,0,0,0,0], // legs splitting
-    [0,0,0,0,1,0,0,0,0,1,0,0,0,0], // lower legs - left forward
-    [0,0,0,1,0,0,0,0,0,0,0,0,0,0], // left foot forward
-    [0,0,0,1,0,0,0,0,0,0,1,1,0,0], // left foot + right foot back
+    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
+    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
+    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
+    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
+    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
+    [0,0,0,1,1,1,1,1,1,0,1,0], // shoulders + arm front
+    [0,0,1,0,1,1,1,1,0,0,0,1], // ribs + arm
+    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
+    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
+    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
+    [0,0,0,1,0,0,0,1,0,0,0,0], // legs split
+    [0,0,1,0,0,0,0,0,1,0,0,0], // legs wide
+    [0,1,0,0,0,0,0,0,0,1,1,0], // lower legs
+    [1,1,0,0,0,0,0,0,0,0,1,1], // feet
   ];
 
   const SKEL_JUMP = [
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // skull top
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull
-    [0,0,0,1,0,1,1,1,0,1,1,0,0,0], // eyes
-    [0,0,0,1,1,1,1,1,1,1,1,0,0,0], // skull bottom
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // jaw
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // neck
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,1,0,0,1,1,1,1,1,1,0,0,1,0], // ribs + arms up
-    [1,0,0,0,0,1,1,1,1,0,0,0,0,1], // ribs + arms up
-    [0,0,0,0,1,1,0,0,1,1,0,0,0,0], // lower ribs
-    [0,0,0,0,0,1,1,1,1,0,0,0,0,0], // spine
-    [0,0,0,0,1,1,1,1,1,1,0,0,0,0], // pelvis
-    [0,0,0,0,1,0,0,0,0,1,0,0,0,0], // legs tucked
-    [0,0,0,1,0,0,0,0,0,0,1,0,0,0], // legs spread
-    [0,0,1,1,0,0,0,0,0,0,1,1,0,0], // feet dangling
+    [0,0,0,1,1,1,1,1,1,0,0,0], // skull top
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull
+    [0,0,1,0,0,1,1,0,0,1,0,0], // eyes
+    [0,0,1,1,1,1,1,1,1,1,0,0], // skull mid
+    [0,0,0,1,1,1,1,1,1,0,0,0], // jaw
+    [0,0,0,0,1,0,0,1,0,0,0,0], // teeth
+    [0,0,0,0,0,1,1,0,0,0,0,0], // neck
+    [0,1,0,1,1,1,1,1,1,0,1,0], // arms up + shoulders
+    [1,0,0,0,1,1,1,1,0,0,0,1], // arms up + ribs
+    [0,0,0,0,1,0,0,1,0,0,0,0], // rib gap
+    [0,0,0,0,1,1,1,1,0,0,0,0], // lower torso
+    [0,0,0,1,1,1,1,1,1,0,0,0], // pelvis
+    [0,0,0,0,1,0,0,1,0,0,0,0], // legs together
+    [0,0,0,1,1,0,0,1,1,0,0,0], // feet tucked
   ];
 
-  // Tombstone ~10x14 (slightly smaller to match new scale)
+  // Tombstone ~10x14
   const TOMBSTONE_SMALL = [
     [0,0,0,1,1,1,1,0,0,0],
     [0,0,1,1,1,1,1,1,0,0],
@@ -125,7 +136,6 @@
     [1,1,1,1,1,1,1,1,1,1],
   ];
 
-  // Cross ~6x18
   const CROSS = [
     [0,0,1,1,0,0],
     [0,0,1,1,0,0],
@@ -146,7 +156,6 @@
     [0,1,1,1,1,0],
   ];
 
-  // Double tombstone ~20x14
   const TOMBSTONE_DOUBLE = [
     [0,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0],
     [0,0,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,0,0],
@@ -164,7 +173,6 @@
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   ];
 
-  // Score font (3x5 digits)
   const DIGITS = {
     '0': [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
     '1': [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
@@ -178,7 +186,6 @@
     '9': [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
   };
 
-  // Ground scroll
   let groundOffset = 0;
   const GROUND_BUMPS = [];
   for (let i = 0; i < 200; i++) {
@@ -208,16 +215,12 @@
     const digitW = (3 + 1) * DS;
     let startX = GAME_W - 15 - s.length * digitW;
 
+    // High score - just the number, no "HI"
     if (highScore > 0) {
       const hs = String(Math.floor(highScore)).padStart(5, '0');
-      const hiX = startX - 8 - hs.length * digitW - 16;
-      ctx.fillStyle = '#9b9590';
-      ctx.fillRect(hiX, 8, DS, 5 * DS);
-      ctx.fillRect(hiX + 2 * DS, 8, DS, 5 * DS);
-      ctx.fillRect(hiX, 8 + 2 * DS, 3 * DS, DS);
-      ctx.fillRect(hiX + 4 * DS, 8, DS, 5 * DS);
+      const hiX = startX - 12 - hs.length * digitW;
       for (let i = 0; i < hs.length; i++) {
-        drawPixels(DIGITS[hs[i]], hiX + 7 * DS + i * digitW, 8, '#9b9590', DS);
+        drawPixels(DIGITS[hs[i]], hiX + i * digitW, 8, '#9b9590', DS);
       }
     }
 
@@ -245,20 +248,21 @@
     const sprite = type.sprite;
     const h = sprite.length * S;
     const w = sprite[0].length * S;
-    // Obstacles sit ON the ground line (bottom aligned to ground + a bit below)
     obstacles.push({
       x: GAME_W + 10,
-      y: GROUND_Y - h + FEET_BELOW_GROUND,
+      y: GROUND_Y - h + FEET_BELOW,
       w: w,
       h: h,
       sprite: sprite
     });
   }
 
+  function getFloorY(spriteRows) {
+    return GROUND_Y - spriteRows * S + FEET_BELOW;
+  }
+
   function reset() {
-    const spriteH = SKEL_RUN1.length * S;
-    // Position skeleton so last ~4 rows (feet) are below ground line
-    skeleton.y = GROUND_Y - spriteH + FEET_BELOW_GROUND;
+    skeleton.y = getFloorY(SKEL_RUN1.length);
     skeleton.vy = 0;
     skeleton.jumping = false;
     skeleton.frame = 0;
@@ -290,29 +294,24 @@
     speed = 6 + score * 0.008;
     if (speed > 16) speed = 16;
 
-    // Skeleton physics
     skeleton.vy += GRAVITY;
     skeleton.y += skeleton.vy;
 
-    const spriteH = SKEL_RUN1.length * S;
-    const floorY = GROUND_Y - spriteH + FEET_BELOW_GROUND;
+    const floorY = getFloorY(SKEL_RUN1.length);
     if (skeleton.y >= floorY) {
       skeleton.y = floorY;
       skeleton.vy = 0;
       skeleton.jumping = false;
     }
 
-    // Animation frame
     skeleton.frameTimer++;
     if (skeleton.frameTimer > 6) {
       skeleton.frame = 1 - skeleton.frame;
       skeleton.frameTimer = 0;
     }
 
-    // Ground scroll
     groundOffset += speed;
 
-    // Obstacles
     obstacleTimer++;
     const minGap = Math.max(30, 55 - score * 0.1);
     const maxGap = Math.max(60, 100 - score * 0.1);
@@ -330,10 +329,11 @@
     }
 
     // Collision
-    const skW = 14 * S;
-    const skX = skeleton.x + 2 * S;
-    const skY = skeleton.y + 2 * S;
-    const skH = spriteH - 6 * S;
+    const spriteH = SKEL_RUN1.length * S;
+    const skW = 10 * S;
+    const skX = skeleton.x + 1 * S;
+    const skY = skeleton.y + 1 * S;
+    const skH = spriteH - 4 * S;
 
     for (let obs of obstacles) {
       const oX = obs.x + 2;
@@ -356,18 +356,23 @@
     ctx.fillStyle = FG;
     ctx.fillRect(0, GROUND_Y, GAME_W, 1);
 
-    // Ground bumps (scrolling)
-    for (let b of GROUND_BUMPS) {
-      const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
-      const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
-      if (drawX >= 0 && drawX < GAME_W) {
-        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
+    // Ground bumps
+    if (gameRunning || gameOver) {
+      for (let b of GROUND_BUMPS) {
+        const bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
+        const drawX = bx < -10 ? bx + GAME_W + 100 : bx;
+        if (drawX >= 0 && drawX < GAME_W) {
+          ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
+        }
       }
     }
 
-    // Skeleton - drawn ON TOP of ground line (feet cross it)
+    // Skeleton
     let sprite;
-    if (skeleton.jumping) {
+    if (!gameRunning && !gameOver) {
+      // Idle pose before game starts (like chrome dino standing)
+      sprite = SKEL_IDLE;
+    } else if (skeleton.jumping) {
       sprite = SKEL_JUMP;
     } else {
       sprite = skeleton.frame === 0 ? SKEL_RUN1 : SKEL_RUN2;
@@ -379,8 +384,10 @@
       drawPixels(obs.sprite, obs.x, obs.y);
     }
 
-    // Score
-    drawScore();
+    // Score (only when game is active)
+    if (gameRunning || gameOver) {
+      drawScore();
+    }
 
     // Game over
     if (gameOver) {
@@ -388,14 +395,6 @@
       ctx.font = 'bold 18px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', GAME_W / 2, GAME_H / 2 - 5);
-    }
-
-    // Start prompt
-    if (!gameRunning && !gameOver) {
-      ctx.fillStyle = FG;
-      ctx.font = '14px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('start', GAME_W / 2, GAME_H / 2);
     }
   }
 
@@ -430,12 +429,10 @@
     else jump();
   }, { passive: false });
 
-  // Init
   let loopStarted = false;
 
   function initGame() {
-    const spriteH = SKEL_RUN1.length * S;
-    skeleton.y = GROUND_Y - spriteH + FEET_BELOW_GROUND;
+    skeleton.y = getFloorY(SKEL_IDLE.length);
     draw();
     if (!loopStarted) {
       loopStarted = true;
@@ -443,7 +440,6 @@
     }
   }
 
-  // Watch for page2 becoming visible
   const page2 = document.getElementById('page2');
   if (page2) {
     const observer = new MutationObserver(() => {
