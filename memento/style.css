@@ -57,7 +57,6 @@ body {
   width: 90vw;
   max-width: 900px;
   margin: 0 auto 40px;
-  overflow: hidden;
 }
 
 #gameCanvas {

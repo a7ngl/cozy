@@ -266,13 +266,24 @@
   };
 
   var GROUND_BUMPS = [];
-  for (var i = 0; i < 80; i++) {
+  for (var i = 0; i < 60; i++) {
     GROUND_BUMPS.push({
-      x: i * 12 + Math.random() * 6,
-      h: 1, w: Math.random() > 0.5 ? 2 : 1,
-      yOff: Math.floor(Math.random() * 3)
+      x: i * 15 + Math.random() * 8,
+      w: 2 + Math.floor(Math.random() * 6),
+      h: 1 + Math.floor(Math.random() * 2)
     });
   }
+
+  var GROUND_LINE = [];
+  (function() {
+    var gx = 0;
+    while (gx < GAME_W * 3) {
+      var segW = 4 + Math.floor(Math.random() * 12);
+      var bump = Math.random() > 0.75 ? -(1 + Math.floor(Math.random() * 2)) : 0;
+      GROUND_LINE.push({ x: gx, w: segW, dy: bump });
+      gx += segW;
+    }
+  })();
 
   var FLY_Y = GROUND_Y - 42;
 
@@ -422,34 +433,25 @@
     var gaps = [];
     if (!skeleton.jumping) gaps.push({ l: skelLeft, r: skelRight });
 
-    if (!gameRunning && !gameOver && !gameStarting) {
-      var sc = skeleton.x + 6 * S, lw = 14 * S + 40, ls = sc - lw / 2;
-      ctx.fillRect(ls, GROUND_Y, skelLeft - ls, 1);
-      ctx.fillRect(skelRight, GROUND_Y, ls + lw - skelRight, 1);
-    } else if (gameStarting) {
-      ctx.fillRect(0, GROUND_Y, skelLeft, 1);
-      ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
-    } else {
-      var lineX = 0;
-      gaps.sort(function(a, b) { return a.l - b.l; });
-      for (var gi = 0; gi < gaps.length; gi++) {
-        if (gaps[gi].l > lineX) ctx.fillRect(lineX, GROUND_Y, gaps[gi].l - lineX, 1);
-        lineX = Math.max(lineX, gaps[gi].r);
+    var glOffset = Math.floor(groundOffset * 0.8) % (GAME_W * 3);
+    var gapL = skeleton.jumping ? -1 : skelLeft;
+    var gapR = skeleton.jumping ? -1 : skelRight;
+    for (var gli = 0; gli < GROUND_LINE.length; gli++) {
+      var gl = GROUND_LINE[gli];
+      var glx = gl.x - glOffset;
+      while (glx < -gl.w) glx += GAME_W * 3;
+      if (glx > GAME_W) continue;
+      if (glx + gl.w < gapL || glx > gapR) {
+        ctx.fillRect(Math.floor(glx), GROUND_Y + gl.dy, gl.w, 1);
       }
-      if (lineX < GAME_W) ctx.fillRect(lineX, GROUND_Y, GAME_W - lineX, 1);
     }
 
     for (var bi = 0; bi < GROUND_BUMPS.length; bi++) {
       var b = GROUND_BUMPS[bi];
-      var bx = ((b.x * 5 - groundOffset * 0.5) % (GAME_W + 100));
-      var drawX = bx < -10 ? bx + GAME_W + 100 : bx;
+      var bx = ((b.x * 6 - groundOffset * 0.4) % (GAME_W + 200));
+      var drawX = bx < -10 ? bx + GAME_W + 200 : bx;
       if (drawX >= 0 && drawX < GAME_W) {
-        if (!gameRunning && !gameOver && !gameStarting) {
-          var sc2 = skeleton.x + 6 * S, lw2 = 14 * S + 40, ls2 = sc2 - lw2 / 2;
-          if (drawX >= ls2 && drawX <= ls2 + lw2) ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
-        } else {
-          ctx.fillRect(Math.floor(drawX), GROUND_Y + 3 + b.yOff, b.w, b.h);
-        }
+        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3, b.w, b.h);
       }
     }
 
@@ -485,32 +487,10 @@
 
   function startOpening() {
     if (gameStarting || gameRunning) return;
-    gameStarting = true;
-    skeleton.y = getFloorY(SKEL_RUN1.length);
+    reset();
     skeleton.vy = JUMP_FORCE;
     skeleton.jumping = true;
     playJump();
-
-    var container = canvas.parentElement;
-    var displayScale = container.offsetWidth / GAME_W;
-    var skelEndPx = Math.ceil((skeleton.x + 12 * S + 4) * displayScale);
-    var fullPx = container.offsetWidth;
-
-    var styleEl = document.createElement('style');
-    styleEl.innerHTML = '@keyframes skelIntro{from{width:' + skelEndPx + 'px}to{width:' + fullPx + 'px}}';
-    document.head.appendChild(styleEl);
-
-    container.style.width = skelEndPx + 'px';
-    container.style.animation = 'skelIntro 1.5s ease-out 1 both';
-
-    container.addEventListener('animationend', function onDone() {
-      container.removeEventListener('animationend', onDone);
-      container.style.animation = '';
-      container.style.width = '';
-      styleEl.remove();
-      gameStarting = false;
-      reset();
-    });
   }
 
   document.addEventListener('keydown', function(e) {
