@@ -235,10 +235,10 @@
     [1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,0],
     [1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,0],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0],
+    [1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0],
+    [1,1,0,0,1,0,0,1,1,1,1,1,0,0,1,0,0,1,1,0],
+    [1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0]
@@ -287,9 +287,9 @@
     if (highScore > 0) {
       var hs = String(Math.floor(highScore)).padStart(5, '0');
       var hiX = startX - 12 - hs.length * digitW;
-      for (var i = 0; i < hs.length; i++) drawPixels(DIGITS[hs[i]], hiX + i * digitW, 8, '#9b9590', DS);
+      for (var i = 0; i < hs.length; i++) drawPixels(DIGITS[hs[i]], hiX + i * digitW, 12, '#9b9590', DS);
     }
-    for (var i = 0; i < s.length; i++) drawPixels(DIGITS[s[i]], startX + i * digitW, 8, FG, DS);
+    for (var i = 0; i < s.length; i++) drawPixels(DIGITS[s[i]], startX + i * digitW, 12, FG, DS);
   }
 
   function getFloorY(rows) { return GROUND_Y - rows * S + FEET_BELOW; }
@@ -297,7 +297,7 @@
   function spawnCloud() {
     clouds.push({
       x: GAME_W + 10,
-      y: 15 + Math.random() * 35,
+      y: 10 + Math.random() * 25,
       speed: 1.5 + Math.random()
     });
   }
@@ -523,6 +523,22 @@
     new MutationObserver(function() {
       if (!page2.classList.contains('hidden')) setTimeout(initGame, 50);
     }).observe(page2, { attributes: true, attributeFilter: ['class'] });
+
+    function isInputArea(t) {
+      return t.tagName === 'INPUT' || t.tagName === 'BUTTON' || (t.closest && (t.closest('input') || t.closest('button')));
+    }
+    page2.addEventListener('click', function(e) {
+      if (isInputArea(e.target)) return;
+      if (!gameRunning && !gameOver && !gameStarting) startOpening();
+      else if (gameRunning) jump();
+      else if (gameOver) reset();
+    });
+    page2.addEventListener('touchstart', function(e) {
+      if (isInputArea(e.target)) return;
+      if (!gameRunning && !gameOver && !gameStarting) startOpening();
+      else if (gameRunning) jump();
+      else if (gameOver) reset();
+    }, { passive: true });
   }
 
   initGame();
