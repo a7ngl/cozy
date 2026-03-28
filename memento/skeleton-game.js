@@ -3,17 +3,17 @@
   if (!canvas) return;
   var ctx = canvas.getContext('2d');
 
-  var GAME_W = 600;
-  var GAME_H = 150;
-  canvas.width = GAME_W;
-  canvas.height = GAME_H;
-
   var FG = '#1a1a1a';
   var BG_COLOR = '#F5F0E8';
   var isMobile = window.innerWidth <= 768;
   var S = isMobile ? 3 : 2;
 
-  var GROUND_Y = 118;
+  var GAME_W = 600;
+  var GAME_H = isMobile ? 200 : 150;
+  canvas.width = GAME_W;
+  canvas.height = GAME_H;
+
+  var GROUND_Y = isMobile ? 165 : 118;
   var FEET_BELOW = 3 * S;
   var GRAVITY = 0.6;
   var JUMP_FORCE = -10;
@@ -22,6 +22,7 @@
   var gameRunning = false;
   var gameOver = false;
   var gameStarting = false;
+  var introProgress = 0;
   var score = 0;
   var highScore = 0;
   var speed = 6;
@@ -414,7 +415,18 @@
     var gaps = [];
     if (!skeleton.jumping) gaps.push({ l: skelLeft, r: skelRight });
 
-    if (skeleton.jumping) {
+    if (!gameRunning && !gameOver && !gameStarting) {
+      var sc = skeleton.x + 6 * S, lw = 14 * S + 40, ls = sc - lw / 2;
+      ctx.fillRect(ls, GROUND_Y, skelLeft - ls, 1);
+      ctx.fillRect(skelRight, GROUND_Y, ls + lw - skelRight, 1);
+    } else if (gameStarting) {
+      var ease = 1 - Math.pow(1 - introProgress, 3);
+      var sc2 = skeleton.x + 6 * S, lw2 = 14 * S + 40;
+      var introL = Math.floor((sc2 - lw2 / 2) * (1 - ease));
+      var introR = Math.floor(sc2 + lw2 / 2 + (GAME_W - sc2 - lw2 / 2) * ease);
+      if (introL < skelLeft) ctx.fillRect(introL, GROUND_Y, skelLeft - introL, 1);
+      ctx.fillRect(skelRight, GROUND_Y, introR - skelRight, 1);
+    } else if (skeleton.jumping) {
       ctx.fillRect(0, GROUND_Y, GAME_W, 1);
     } else {
       ctx.fillRect(0, GROUND_Y, skelLeft, 1);
@@ -453,10 +465,27 @@
 
   function startOpening() {
     if (gameStarting || gameRunning) return;
-    reset();
+    gameStarting = true;
+    introProgress = 0;
+    skeleton.y = getFloorY(SKEL_RUN1.length);
     skeleton.vy = JUMP_FORCE;
     skeleton.jumping = true;
     playJump();
+    var startTime = null;
+    var duration = 1000;
+    function animateIntro(ts) {
+      if (!startTime) startTime = ts;
+      introProgress = Math.min((ts - startTime) / duration, 1);
+      if (introProgress >= 1) {
+        gameStarting = false;
+        reset();
+        skeleton.vy = 0;
+        skeleton.jumping = false;
+      } else {
+        requestAnimationFrame(animateIntro);
+      }
+    }
+    requestAnimationFrame(animateIntro);
   }
 
   document.addEventListener('keydown', function(e) {
