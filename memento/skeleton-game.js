@@ -265,33 +265,6 @@
     '9':[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
   };
 
-  var GROUND_BUMPS = [];
-  for (var i = 0; i < 40; i++) {
-    GROUND_BUMPS.push({
-      x: i * 22 + Math.random() * 10,
-      w: 1 + Math.floor(Math.random() * 2),
-      h: 1
-    });
-  }
-
-  var GROUND_LINE = [];
-  (function() {
-    var gx = 0;
-    while (gx < GAME_W * 3) {
-      var r = Math.random();
-      if (r > 0.92) {
-        var hillW = 20 + Math.floor(Math.random() * 30);
-        GROUND_LINE.push({ x: gx, w: Math.floor(hillW * 0.3), dy: 0 });
-        GROUND_LINE.push({ x: gx + Math.floor(hillW * 0.3), w: Math.floor(hillW * 0.4), dy: -1 });
-        GROUND_LINE.push({ x: gx + Math.floor(hillW * 0.7), w: Math.floor(hillW * 0.3), dy: 0 });
-        gx += hillW;
-      } else {
-        var flatW = 8 + Math.floor(Math.random() * 20);
-        GROUND_LINE.push({ x: gx, w: flatW, dy: 0 });
-        gx += flatW;
-      }
-    }
-  })();
 
   var FLY_Y = GROUND_Y - 42;
 
@@ -441,26 +414,11 @@
     var gaps = [];
     if (!skeleton.jumping) gaps.push({ l: skelLeft, r: skelRight });
 
-    var glOffset = Math.floor(groundOffset * 0.8) % (GAME_W * 3);
-    var gapL = skeleton.jumping ? -1 : skelLeft;
-    var gapR = skeleton.jumping ? -1 : skelRight;
-    for (var gli = 0; gli < GROUND_LINE.length; gli++) {
-      var gl = GROUND_LINE[gli];
-      var glx = gl.x - glOffset;
-      while (glx < -gl.w) glx += GAME_W * 3;
-      if (glx > GAME_W) continue;
-      if (glx + gl.w < gapL || glx > gapR) {
-        ctx.fillRect(Math.floor(glx), GROUND_Y + gl.dy, gl.w, 1);
-      }
-    }
-
-    for (var bi = 0; bi < GROUND_BUMPS.length; bi++) {
-      var b = GROUND_BUMPS[bi];
-      var bx = ((b.x * 6 - groundOffset * 0.4) % (GAME_W + 200));
-      var drawX = bx < -10 ? bx + GAME_W + 200 : bx;
-      if (drawX >= 0 && drawX < GAME_W) {
-        ctx.fillRect(Math.floor(drawX), GROUND_Y + 3, b.w, b.h);
-      }
+    if (skeleton.jumping) {
+      ctx.fillRect(0, GROUND_Y, GAME_W, 1);
+    } else {
+      ctx.fillRect(0, GROUND_Y, skelLeft, 1);
+      ctx.fillRect(skelRight, GROUND_Y, GAME_W - skelRight, 1);
     }
 
     var sprite;
