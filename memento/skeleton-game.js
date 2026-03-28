@@ -266,11 +266,11 @@
   };
 
   var GROUND_BUMPS = [];
-  for (var i = 0; i < 60; i++) {
+  for (var i = 0; i < 40; i++) {
     GROUND_BUMPS.push({
-      x: i * 15 + Math.random() * 8,
-      w: 2 + Math.floor(Math.random() * 6),
-      h: 1 + Math.floor(Math.random() * 2)
+      x: i * 22 + Math.random() * 10,
+      w: 1 + Math.floor(Math.random() * 2),
+      h: 1
     });
   }
 
@@ -278,10 +278,18 @@
   (function() {
     var gx = 0;
     while (gx < GAME_W * 3) {
-      var segW = 4 + Math.floor(Math.random() * 12);
-      var bump = Math.random() > 0.75 ? -(1 + Math.floor(Math.random() * 2)) : 0;
-      GROUND_LINE.push({ x: gx, w: segW, dy: bump });
-      gx += segW;
+      var r = Math.random();
+      if (r > 0.92) {
+        var hillW = 20 + Math.floor(Math.random() * 30);
+        GROUND_LINE.push({ x: gx, w: Math.floor(hillW * 0.3), dy: 0 });
+        GROUND_LINE.push({ x: gx + Math.floor(hillW * 0.3), w: Math.floor(hillW * 0.4), dy: -1 });
+        GROUND_LINE.push({ x: gx + Math.floor(hillW * 0.7), w: Math.floor(hillW * 0.3), dy: 0 });
+        gx += hillW;
+      } else {
+        var flatW = 8 + Math.floor(Math.random() * 20);
+        GROUND_LINE.push({ x: gx, w: flatW, dy: 0 });
+        gx += flatW;
+      }
     }
   })();
 
