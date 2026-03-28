@@ -528,16 +528,12 @@
       return t.tagName === 'INPUT' || t.tagName === 'BUTTON' || (t.closest && (t.closest('input') || t.closest('button')));
     }
     page2.addEventListener('click', function(e) {
-      if (isInputArea(e.target)) return;
-      if (!gameRunning && !gameOver && !gameStarting) startOpening();
-      else if (gameRunning) jump();
-      else if (gameOver) reset();
+      if (isInputArea(e.target) || e.target === canvas) return;
+      if (gameRunning && !gameOver) jump();
     });
     page2.addEventListener('touchstart', function(e) {
-      if (isInputArea(e.target)) return;
-      if (!gameRunning && !gameOver && !gameStarting) startOpening();
-      else if (gameRunning) jump();
-      else if (gameOver) reset();
+      if (isInputArea(e.target) || e.target === canvas) return;
+      if (gameRunning && !gameOver) jump();
     }, { passive: true });
   }
 
